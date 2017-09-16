@@ -3,7 +3,8 @@ Keycaps
 
 Keyboard layout editor and renderer
 
-##Models
+Models
+------
 
 OpenSCAD models taken from https://github.com/rsheldiii/openSCAD-projects and slightly edited in Blender,
 then exported using THREEjs JSON exporter into a JSON scene.
