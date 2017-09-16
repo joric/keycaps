@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	</head>
+	<body>
+		<style>
+			* { padding: 0; margin: 0; overflow: hidden; }
+		</style>
+
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/87/three.min.js"></script>
+		<script src="http://threejs.org/examples/js/controls/OrbitControls.js"></script>
+
+		<script src="keycaps.json"></script>
+		<script>sets=[]</script>
+		<script src="layouts/Commodore-VIC20.json"></script>
+
+		<script>
+			var container, stats;
+			var camera, cameraTarget, scene, renderer;
+			var geometries = [];
+
+			init();
+			animate();
+
+			function init() {
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				camera = new THREE.PerspectiveCamera( 35, window.innerWidth / window.innerHeight, 0.1, 150 );
+
+				//camera.position.set( 3, 3, 3 );
+
+				camera.position.set( 0, 0, 8 );
+				cameraTarget = new THREE.Vector3( 0, 0, 0 );
+
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0xdddddd );
+
+				//var dirLight = new THREE.DirectionalLight(0xffffff, 1);
+				//dirLight.position.set(100, 100, 50);
+				//scene.add(dirLight);
+
+				pointLight = new THREE.PointLight( 0xffffff );
+				pointLight.position.set(1,1,2);
+				camera.add(pointLight);
+				scene.add( camera );
+
+				//var light = new THREE.HemisphereLight( 0xcccccc, 0x080808, 1 );
+				//scene.add( light );
+
+				var loader = new THREE.BufferGeometryLoader();
+
+				function makeTexture(color, textColor, text) {
+					w = 256;
+					h = 256;
+					d = 0;
+					var canvas = document.createElement( 'canvas' );
+					canvas.width = w;
+					canvas.height = h;
+					var ctx = canvas.getContext( '2d' );
+					ctx.fillStyle = '#'+color.toString(16);
+					ctx.fillRect( 0+d, 0+d, w-d*2, h-d*2 );
+					var tx = canvas.width / 2;
+					var ty = canvas.height / 2;
+					ctx.font = 'Bold 32px Arial';
+					ctx.textAlign='center';
+					ctx.fillStyle = '#'+textColor.toString(16);
+					ctx.fillText(text, tx, ty);
+					return canvas;
+				}
+
+				//var color=0xffffff; var intensity=1.5;
+				//var directionalLight = new THREE.DirectionalLight( color, intensity );
+				//directionalLight.position.set( 10, 10, 10 );
+				//scene.add( directionalLight );
+
+				assignUVs = function( geometry ){
+					geometry.computeBoundingBox();
+					var max	 = geometry.boundingBox.max;
+					var min	 = geometry.boundingBox.min;
+					var offset  = new THREE.Vector2(0 - min.x, 0 - min.y);
+					var range   = new THREE.Vector2(max.x - min.x, max.y - min.y);
+					var facenum = geometry.attributes.position.count;
+					var uvs = new Float32Array( facenum*2 );
+					for (i=0; i<facenum; i++) {
+						vx = geometry.attributes.position.array[i*3+0];
+						vy = geometry.attributes.position.array[i*3+1];
+						uvs[i*2+0] = (vx + offset.x)/range.x;
+						uvs[i*2+1] = (vy + offset.y)/range.y;
+					}
+					geometry.addAttribute( 'uv', new THREE.BufferAttribute( uvs, 2 ) );
+				}
+				
+				data.geometries.forEach( function(obj, index) {
+					var loader = new THREE.BufferGeometryLoader();
+					var geometry = loader.parse(obj);
+
+					geometry.scale(-1,-1,1);
+
+					//geometry.computeVertexNormals();
+					//geometry.computeFaceNormals();
+
+					var material = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x101010, wireframe: false } )
+					//var material = new THREE.MeshLambertMaterial( { color: 0xffffff, wireframe: true } );
+					//var material = new THREE.MeshLambertMaterial( { color: 0xffffff } );
+				
+					var caption = obj.name.replace(/Geometry.*$/g,'');
+
+					var canvas = makeTexture(0x404040, 0xffffff, caption);
+
+					var texture =  new THREE.Texture( canvas );
+					//texture.flipY = false;
+					material.map = texture;
+					material.map.needsUpdate = true;
+
+					assignUVs(geometry);
+					var mesh = new THREE.Mesh( geometry, material );
+
+					d = 1;
+					rows = 4
+					cols = 4
+					px = (index % rows) - 1.5;
+					py = Math.floor(index/cols) - 1;
+
+					//mesh.rotation.set(0,0,Math.PI);
+					//mesh.applyMatrix(new THREE.Matrix4().makeScale(-1, 1, 1));
+
+					mesh.position.set( px*d, -py*d, 0);
+
+					s = 0.053;
+					mesh.scale.set( s, s, s );
+					scene.add( mesh );
+				});
+				
+				renderer = new THREE.WebGLRenderer( { antialias: false } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+
+				controls = new THREE.OrbitControls( camera );
+
+				window.addEventListener( 'resize', onWindowResize, false );
+				camera.lookAt( cameraTarget );
+			}
+
+			function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+			}
+
+			function animate() {
+				requestAnimationFrame( animate );
+				render();
+			}
+
+			function render() {
+				renderer.render( scene, camera );
+			}
+		</script>
+	</body>
+</html>

@@ -1,0 +1,113 @@
+body {
+	padding: 0;
+	margin: 0;
+}
+
+#header {
+	position: absolute;
+	height: 50px;
+	width: 100%;
+	background-color: grey;
+	color: white;
+	line-height: 50px;
+	text-indent: 10px;
+}
+
+#content {
+	position: absolute;
+	top: 50px;
+	bottom: 30px;
+	background-color: yellow;
+	width:100%;
+}
+
+#footer {
+	position:absolute;
+	height: 30px;
+	bottom: 0;
+	width: 100%;
+	background-color: lightgrey;
+	color: black;
+	line-height: 30px;
+	text-indent: 10px;
+}
+
+#area {
+	width: 100%;
+	background-color: #dbd3d3;
+	height: 100%;
+	overflow: auto;
+	float: left;
+}
+
+#field {
+	width: 100%;
+	height: 100%;
+	position: relative;
+}
+
+#sidebar {
+	width: 0%;
+	background-color: #eee;
+	height: 100%;
+	float: left;
+	overflow: hidden;
+}
+
+#info { width: 49%; float: left; text-align: right; margin-right: 5px;}
+
+#controls { width: 50%; float: left; text-align: left; }
+
+#list ol li { padding: 0px; margin: 0px; }
+
+#list ol li div { margin-top: -16px; }
+
+#list { overflow: auto; float: left; }
+
+#osd { width: 100%; height: 100%; position: relative; }
+
+#output { height: 100px;  }
+
+.thumb { border: 1px solid #000; margin: 10px 5px 0 0; }
+.elem { left: 0px; top: 0px; position: absolute;  }
+
+.frame { left: 0px; top: 0px; position: absolute; border: 2px #f00 dashed; opacity: 0.5;  }
+
+.selected {
+	-webkit-box-shadow:inset 0px 0px 0px 2px #f00;
+	-moz-box-shadow:inset 0px 0px 0px 2px #f00;
+	box-shadow:inset 0px 0px 0px 2px #f00;
+	background-color: #00f;
+}
+
+.hidden { display: none; }
+
+.sprite {
+	cursor: default;
+	width: 64px;
+	height: 64px;
+	background-color: #fff;
+	background-size: 64px 64px;
+	background-image: url('images/SA_BASE1.png');
+}
+
+.sprite-text {
+	font-size: 12px;
+	font-family: sans-serif;
+	font-weight: bold;
+	display: table-cell;
+	text-align: center;
+	vertical-align: middle;
+	padding: 3px;
+	text-shadow: 1px 1px 3px rgba(128,128,128,0.5);
+}
+
+#embedded,img { width:64px; }
+
+[draggable] {
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
