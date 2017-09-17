@@ -1,0 +1,72 @@
+sets[sets.length]=
+[
+  {
+    "name": "Keycap Profiles",
+    "author": "Joric"
+  },
+  [
+    {
+      "y": 1.25,
+      "x": 5.25,
+      "c": "#404040",
+      "t": "#ffffff",
+      "p": "SA R1",
+      "a": 7
+    },
+    "SA R1",
+    {
+      "x": 1,
+      "p": "G20 R1"
+    },
+    "G20 R1",
+    {
+      "p": "DCS R1"
+    },
+    "DCS R1"
+  ],
+  [
+    {
+      "x": 5.25,
+      "p": "SA R2"
+    },
+    "SA R2",
+    {
+      "x": 2,
+      "p": "DCS R2",
+      "sm": "cherry"
+    },
+    "DCS R2"
+  ],
+  [
+    {
+      "x": 5.25,
+      "p": "SA R3",
+      "sm": ""
+    },
+    "SA R3",
+    {
+      "p": "DSA R3"
+    },
+    "DSA R3",
+    {
+      "p": "G20 R3"
+    },
+    "G20 R3",
+    {
+      "p": "DCS R3"
+    },
+    "DCS R3"
+  ],
+  [
+    {
+      "x": 5.25,
+      "p": "SA R4"
+    },
+    "SA R4",
+    {
+      "x": 2,
+      "p": "DCS R4"
+    },
+    "DCS R4"
+  ]
+]
