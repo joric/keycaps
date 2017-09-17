@@ -9,24 +9,49 @@ echo rendering...
 
 echo start time: %time%
 
-::takes about 37 seconds a key
-::openscad.exe -Dprofile=0 -Drow=1 -o ..\render\dcs_row_1.stl render.scad
-::openscad.exe -Dprofile=0 -Drow=2 -o ..\render\dcs_row_2.stl render.scad
-::openscad.exe -Dprofile=0 -Drow=3 -o ..\render\dcs_row_3.stl render.scad
-::openscad.exe -Dprofile=0 -Drow=4 -o ..\render\dcs_row_4.stl render.scad
+goto sa_mods
 
-::takes about 20 minutes a key
-::openscad.exe -Dprofile=1 -Drow=3 -o ..\render\dsa_row_3.stl render.scad
+:dcs
+openscad.exe -Dprofile=0 -Drow=1 -o "..\render\DCS R1.stl" render.scad
+openscad.exe -Dprofile=0 -Drow=2 -o "..\render\DCS R2.stl" render.scad
+openscad.exe -Dprofile=0 -Drow=3 -o "..\render\DCS R3.stl" render.scad
+openscad.exe -Dprofile=0 -Drow=4 -o "..\render\DCS R4.stl" render.scad
 
-::takes 27,21,19 and 35 minutes respectively
-::openscad.exe -Dprofile=2 -Drow=1 -o ..\render\sa_row_1.stl render.scad
-::openscad.exe -Dprofile=2 -Drow=2 -o ..\render\sa_row_2.stl render.scad
-::openscad.exe -Dprofile=2 -Drow=3 -o ..\render\sa_row_3.stl render.scad
-::openscad.exe -Dprofile=2 -Drow=4 -o ..\render\sa_row_4.stl render.scad
+:dcs_mods
+openscad.exe -Dprofile=0 -Drow=1 -Dw=2.0 -o "..\render\DCS R1 2.stl" render.scad
+openscad.exe -Dprofile=0 -Drow=2 -Dw=1.5 -o "..\render\DCS R2 1.5.stl" render.scad
+openscad.exe -Dprofile=0 -Drow=3 -Dw=1.75 -o "..\render\DCS R3 1.75.stl" render.scad
+openscad.exe -Dprofile=0 -Drow=3 -Dw=2.25 -o "..\render\DCS R3 2.25.stl" render.scad
+openscad.exe -Dprofile=0 -Drow=4 -Dw=2.25 -o "..\render\DCS R4 2.25.stl" render.scad
+openscad.exe -Dprofile=0 -Drow=4 -Dw=2.75 -o "..\render\DCS R4 2.75.stl" render.scad
+openscad.exe -Dprofile=0 -Drow=4 -Dw=1.25 -o "..\render\DCS R4 1.25.stl" render.scad
+openscad.exe -Dprofile=1 -Dspacebar=1 -Drow=1 -o "..\render\DCS SPACE.stl" render.scad
 
-::takes about 12 seconds a key
-::openscad.exe -Dprofile=3 -Drow=1 -o ..\render\g20.stl render.scad
-::openscad.exe -Dprofile=3 -Drow=3 -o ..\render\g20_row_3.stl render.scad
+:dsa
+openscad.exe -Dprofile=1 -Drow=1 -o ..\render\DSA R1.stl render.scad
 
+:g20
+openscad.exe -Dprofile=3 -Drow=1 -o "..\render\G20 R1.stl" render.scad
+openscad.exe -Dprofile=3 -Drow=3 -o "..\render\G20 R3.stl" render.scad
+
+:sa
+openscad.exe -Dprofile=2 -Drow=1 -o "..\render\SA R1.stl" render.scad
+openscad.exe -Dprofile=2 -Drow=2 -o "..\render\SA R2.stl" render.scad
+openscad.exe -Dprofile=2 -Drow=3 -o "..\render\SA R3.stl" render.scad
+openscad.exe -Dprofile=2 -Drow=4 -o "..\render\SA R4.stl" render.scad
+
+:sa_mods
+openscad.exe -Dprofile=2 -Drow=1 -Dw=2.0 -o "..\render\SA R1 2.stl" render.scad
+openscad.exe -Dprofile=2 -Drow=2 -Dw=1.5 -o "..\render\SA R2 1.5.stl" render.scad
+openscad.exe -Dprofile=2 -Drow=3 -Dw=1.75 -o "..\render\SA R3 1.75.stl" render.scad
+openscad.exe -Dprofile=2 -Drow=3 -Dw=2.25 -o "..\render\SA R3 2.25.stl" render.scad
+openscad.exe -Dprofile=2 -Drow=4 -Dw=2.25 -o "..\render\SA R4 2.25.stl" render.scad
+openscad.exe -Dprofile=2 -Drow=4 -Dw=2.75 -o "..\render\SA R4 2.75.stl" render.scad
+openscad.exe -Dprofile=2 -Drow=4 -Dw=1.25 -o "..\render\SA R4 1.25.stl" render.scad
+goto end
+openscad.exe -Dspacebar=1 -Dprofile=2 -Drow=3 -o "..\render\SA SPACE.stl" render.scad
+
+
+:end
 echo end time: %time%
 

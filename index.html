@@ -6,13 +6,27 @@
 	</head>
 	<body>
 		<style>
-			* { padding: 0; margin: 0; overflow: hidden; }
-			.info { z-index: 1; position: absolute; right: 10px; bottom: 10px; }
+			body { padding: 0; margin: 0; overflow: hidden; }
+			.controls { position: absolute; left: 10px; top: 10px; }
+			.info { position: absolute; right: 10px; bottom: 10px; }
 		</style>
 
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/87/three.min.js"></script>
 		<script src="http://threejs.org/examples/js/controls/OrbitControls.js"></script>
 		<script src="keycaps.json"></script>
+
+		<script>sets=[]</script>
+		<script src="layouts/Default 60%.json"></script>
+		<script src="layouts/PMK Grab Bag (Aug 23, 2017).json"></script>
+		<script src="layouts/GB-Retro-DSA.json"></script>
+		<script src="layouts/ANSI 104.json"></script>
+		<script src="layouts/Leopold FC660m.json"></script>
+		<script src="layouts/Symbolics-364000.json"></script>
+
+		<div class="controls">
+			<input type="file" id="files" name="files[]" multiple="multiple" accept=".json"/>
+			<select id="preset"></select>
+		</div>
 
 		<div class="info"><a href="https://github.com/joric/keycaps">github</a><div>
 
@@ -24,58 +38,75 @@
 			init();
 			animate();
 
-			function init() {
-				container = document.createElement( 'div' );
-				document.body.appendChild( container );
+			function initScene() {
+				scene = new THREE.ObjectLoader().parse(data);
+				camera = scene.getObjectByName("Camera");
+				onWindowResize();
+				pointLight = new THREE.PointLight( 0xffffff );
+				pointLight.position.set(1,1,2);
+				camera.add(pointLight);
+				scene.traverse( function(obj) {
+					if ( obj instanceof THREE.Mesh ) {
+						obj.geometry.scale(-1,-1,1);
+						obj.visible = false;
+					}
+				});
+				camera.up.set( 0, 0, 1 );
+				controls = new THREE.OrbitControls( camera, container );
+				scene.background = new THREE.Color( 0xdddddd );
+			}
 
-				function makeTexture(w, h, color, textColor, text) {
-					var canvas = document.createElement( 'canvas' );
-					canvas.width = w;
-					canvas.height = h;
-					var ctx = canvas.getContext( '2d' );
-					ctx.fillStyle = color;
-					ctx.fillRect(0, 0, w, h);
-					var tx = canvas.width / 2;
-					var ty = canvas.height / 2;
-					ctx.font = 'Bold 32px Arial';
-					ctx.textAlign='center';
-					ctx.fillStyle = textColor;
-					ctx.fillText(text, tx, ty);
-					return canvas;
+
+			function init() {
+				document.getElementById('files').addEventListener('change', function(evt){
+					for (var i = 0, f; f = evt.target.files[i]; i++) {
+						try {
+							var file = evt.target.files[i];
+							var start = 0;
+							var stop = file.size - 1;
+							var reader = new FileReader();
+							reader.onloadend = function(evt) {
+								if (evt.target.readyState == FileReader.DONE) {
+									var json = evt.target.result;
+									deserialize(JSON.parse(json));
+								}
+							};
+							var blob = file.slice(start, stop + 1);
+							reader.readAsBinaryString(blob);
+						} catch (err) {
+							console.log(err.message);
+						}
+					}
+				});
+
+				var ctrl = document.getElementById('preset');
+				ctrl.addEventListener('change', function(evt) {
+					var x = document.getElementById('preset');
+					deserialize(sets[x.options[x.selectedIndex].value]);
+				}, false);
+
+				var scripts = document.body.getElementsByTagName('script');
+				var j = 0;
+				for (var i = 0; i < scripts.length; i++) {
+					var s = /.*\/(.*)\.json$/.exec(scripts[i].getAttribute('src'));
+					if (s) {
+						var option = document.createElement('option');
+						option.text = s[1];
+						option.value = j;
+						ctrl.add(option);
+						j++;
+					}
 				}
 
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
 				renderer = new THREE.WebGLRenderer( { antialias: false } );
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
 				container.appendChild( renderer.domElement );
 				window.addEventListener( 'resize', onWindowResize, false );
 
-				scene = new THREE.ObjectLoader().parse(data);
-
-				camera = scene.getObjectByName("Camera");
-				onWindowResize();
-
-				pointLight = new THREE.PointLight( 0xffffff );
-				pointLight.position.set(1,1,2);
-				camera.add(pointLight);
-
-				scene.traverse( function( node ) {
-					if ( node instanceof THREE.Mesh ) {
-						var material = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x101010, wireframe: false } )
-						var caption = node.name;
-						var canvas = makeTexture(256, 256, '#404040', '#ffffff', caption);
-						var texture =  new THREE.Texture(canvas);
-						material.map = texture;
-						material.map.needsUpdate = true;
-						node.material = material;
-						node.geometry.scale(-1,-1,1);
-					}
-				});
-
-				camera.up.set( 0, 0, 1 );
-				controls = new THREE.OrbitControls( camera );
-				scene.background = new THREE.Color( 0xdddddd );
-
+				deserialize(sets[0]);
 			}
 
 			function onWindowResize() {
@@ -91,6 +122,88 @@
 
 			function render() {
 				renderer.render( scene, camera );
+			}
+
+			function makeTexture(w, h, color, textColor, text, fontSize) {
+				var canvas = document.createElement( 'canvas' );
+				canvas.width = w;
+				canvas.height = h;
+				var ctx = canvas.getContext( '2d' );
+				ctx.fillStyle = color;
+				ctx.fillRect(0, 0, w, h);
+				var tx = canvas.width / 2;
+				var ty = canvas.height / 2;
+				ctx.font = 'Bold '+fontSize+'px Arial';
+				ctx.textAlign='center';
+				ctx.fillStyle = textColor;
+				ctx.fillText(text, tx, ty);
+				return canvas;
+			}
+
+			function add_keycap(x, y, prop, caption, row, rows) {
+				var profile = 'DCS';
+				var space = prop.w>=6.25;
+				rs = '';
+				['DCS','DSA','SA','G20'].forEach(function(s) {if (prop.p.startsWith(s)) profile = s; });
+				['R1','R2','R3','R4'].forEach( function(s) { if (prop.p.includes(' '+s)) rs = s; });
+
+				if (profile=='DSA' && rs=='SPACE') profile='DCS';
+				if (profile=='SA' && rs=='') rs='R3';
+				if (profile=='DSA' && prop.w>1) profile='DCS';
+				if (profile == 'DSA') rs='R1';
+
+				if (rs=='') {
+					var r = y>3 ? 4 : Math.floor(row+1);
+					if (rows==6) {
+						r = [1,1,2,3,4,4][row];
+					} else if (rows==5) {
+						r = [1,2,3,4,4][row];
+					}
+					rs = 'R' + r;
+				}
+
+//console.log(profile,rs,prop.w);
+
+				var name = space ? (profile+' SPACE' ) : profile + ' ' + rs + ( prop.w>1 ? ' '+prop.w : '');
+
+				var obj = scene.getObjectByName(name);
+				obj = obj ? obj.clone() : scene.getObjectByName(profile+' R1').clone();
+				obj.visible = true;
+				s = 19;
+				obj.position.set(142 - (x+prop.w/2)*s, 0, 50-y*s);
+				obj.material = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x101010, wireframe: false } )
+				obj.material.map = new THREE.Texture(makeTexture(256, 256, prop.c, prop.t, caption, prop.f*2+45));
+				obj.material.map.needsUpdate = true;
+				scene.add(obj);
+			}
+
+			function deserialize(data) {
+				initScene();
+				var x = 0;
+				var y = 0;
+				var prop = {c:0,t:0,p:'',a:0,f:0,x:0,y:0,sm:'',w:1,h:1,c:'#ffffff',t:'#000000'};
+				var rows = 0;
+				var row = 0;
+				data.forEach(function(o) {if (Array.isArray(o)) rows++; });
+				data.forEach(function(o) {
+					if (Array.isArray(o)) {
+						o.forEach(function(e) {
+							if (typeof e == 'string') {
+								add_keycap(x,y,prop,e,row,rows);
+								x += prop.w;
+								prop.w = prop.h = 1;
+							} else {
+								Object.keys(e).forEach(function(key) { prop[key] = e[key]; });
+								x += prop.x;
+								y += prop.y;
+								prop.x = prop.y = 0;
+							}
+						});
+						x = 0;
+						y++;
+						row++;
+					}
+				});
 			}
 		</script>
 	</body>

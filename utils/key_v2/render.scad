@@ -208,7 +208,7 @@ module translate_u(x=0, y=0){
 
 module u(u=1) {
   $key_length = u;
-  echo ($key_length);
+  echo ("key_length", $key_length);
   children();
 }
 
@@ -330,20 +330,26 @@ module rounded_cherry_key() {
   keytop();
 }
 
+spacebar=0;
 profile=3;
 row=1;
 w = 1.0;
 
-echo("profile/row:", profile, row);
+echo("profile/row/w:", profile, row, w);
 
-if (profile==0) {
-	translate_u(0, 0) dcs_row(row) rounded_cherry_key();
+
+if (spacebar==1 && profile==0) {
+	spacebar() dcs_row(row) rounded_cherry_key();
+} else if (spacebar==1 && profile==2) {
+	spacebar() sa_row(row) rounded_cherry_key();
+} else if (profile==0) {
+	translate_u(0, 0) u(w) dcs_row(row) rounded_cherry_key();
 } else if (profile==1) {
-	translate_u(0, 0) dsa_row(row) rounded_cherry_key();
+	translate_u(0, 0) u(w) dsa_row(row) rounded_cherry_key();
 } else if (profile==2) {
-	translate_u(0, 0) sa_row(row) rounded_cherry_key();
+	translate_u(0, 0) u(w) sa_row(row) rounded_cherry_key();
 } else if (profile==3) {
-	translate_u(0, 0) g20() rounded_cherry_key();
+	translate_u(0, 0) u(w) g20() rounded_cherry_key();
 }
 
 
