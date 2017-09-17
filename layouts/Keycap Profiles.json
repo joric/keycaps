@@ -16,10 +16,14 @@ sets[sets.length]=
     "SA R1",
     {
       "x": 1,
+      "c": "#ffffff",
+      "t": "#000000",
       "p": "G20 R1"
     },
     "G20 R1",
     {
+      "c": "#404040",
+      "t": "#ffffff",
       "p": "DCS R1"
     },
     "DCS R1"
@@ -40,19 +44,23 @@ sets[sets.length]=
   [
     {
       "x": 5.25,
-      "p": "SA R3",
-      "sm": ""
+      "p": "SA R3"
     },
     "SA R3",
     {
+      "c": "#d1d1d1",
+      "t": "#000000",
       "p": "DSA R3"
     },
     "DSA R3",
     {
+      "c": "#ffffff",
       "p": "G20 R3"
     },
     "G20 R3",
     {
+      "c": "#404040",
+      "t": "#ffffff",
       "p": "DCS R3"
     },
     "DCS R3"
