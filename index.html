@@ -129,28 +129,40 @@
 				renderer.render( scene, camera );
 			}
 
-			function makeTexture(w, h, color, textColor, text, fontSize) {
-				fontSize = fontSize*fontSize+50;
+
+			function render_html_to_canvas(html, ctx, x, y, w, h, cb, canvas, obj) {
+				var doc = document.implementation.createHTMLDocument('');
+				doc.write(html);
+				doc.documentElement.setAttribute('xmlns', doc.documentElement.namespaceURI);
+				var xml = (new XMLSerializer).serializeToString(doc.body);
+				var data = 'data:image/svg+xml;charset=utf-8,'
+					+'<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">' +
+					'<foreignObject width="100%" height="100%">'+xml+'</foreignObject></svg>';
+				var img = new Image();
+				img.onload = function() { ctx.drawImage(img, x, y); cb(canvas, obj); }
+				img.src = data;
+			}
+
+			function makeTexture(w, h, color, textColor, text, fontSize, obj, cb) {
+				fontSize = fontSize*fontSize+60;
+				text = text.replace('\n','<br/>');
 
 				var canvas = document.createElement( 'canvas' );
 				canvas.width = w;
 				canvas.height = h;
-
 				var ctx = canvas.getContext( '2d' );
+
 				ctx.fillStyle = color;
 				ctx.fillRect(0, 0, w, h);
 
-				var tx = canvas.width / 2;
-				var ty = canvas.height / 2 + fontSize / 3;
-				ctx.font = ''+fontSize+'px Arial';
-				ctx.textAlign='center';
-				ctx.fillStyle = textColor;
-				ctx.fillText(text, tx, ty);
+				var html = '<div style="word-wrap: break-word; display: table; padding: 0px; margin: 0px;'
+					+' color: '+textColor+'; background-color: '+ color
+					+'; font: '+fontSize+'px Arial;'
+					+'width: 100%; height: 256px; text-align: center; border 1px #000 solid;">'+
+					'<span style="  display: table-cell; width: 256px;'
+					+'vertical-align: middle; word-wrap: break-word;">'+text+'</span></div>';
 
-				ctx.fillStyle = color;
-				ctx.fillRect(0, 0, 10, h);
-				ctx.fillRect(w-10, 0, 10, h);
-				return canvas;
+				render_html_to_canvas(html, ctx, 0, 0, w, h, cb, canvas, obj);
 			}
 
 			function profile_row(profile, row, rows) {
@@ -191,16 +203,16 @@
 
 				var obj = scene.getObjectByName(name);
 				obj = obj ? obj.clone() : scene.getObjectByName(profile+' R1').clone();
-
-				obj.material = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x101010, wireframe: false } )
-				obj.material.map = new THREE.Texture(makeTexture(256, 256, prop.c, prop.t, caption, prop.f));
-				obj.material.map.needsUpdate = true;
-
 				s = 19;
 				obj.position.set(142 - (x+prop.w/2)*s, 0, 50-y*s);
 				obj.visible = true;
 
-				scene.add(obj);
+				makeTexture(256, 256, prop.c, prop.t, caption, prop.f, obj, function(canvas, obj) {
+					obj.material = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x101010, wireframe: false } )
+					obj.material.map = new THREE.Texture(canvas);
+					obj.material.map.needsUpdate = true;
+					scene.add(obj);
+				});
 			}
 
 			function deserialize(data) {
