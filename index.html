@@ -35,8 +35,8 @@
 		<script>
 			var container, stats;
 			var camera, cameraTarget, scene, renderer;
-			var geometries = [];
 			var obj_names = [];
+			var antialias = !!location.hostname;
 
 			init();
 			animate();
@@ -105,7 +105,7 @@
 
 				container = document.createElement( 'div' );
 				document.body.appendChild( container );
-				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer = new THREE.WebGLRenderer( { antialias: antialias } );
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
 				container.appendChild( renderer.domElement );
@@ -132,15 +132,15 @@
 
 			function render_html_to_canvas(html, ctx, x, y, w, h, cb, canvas, obj) {
 				var doc = document.implementation.createHTMLDocument('');
-				doc.write(html);
+				doc.body.innerHTML = html;
 				doc.documentElement.setAttribute('xmlns', doc.documentElement.namespaceURI);
 				var xml = (new XMLSerializer).serializeToString(doc.body);
-				var data = 'data:image/svg+xml;charset=utf-8,'
-					+'<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">' +
+				var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">' +
 					'<foreignObject width="100%" height="100%">'+xml+'</foreignObject></svg>';
+				var url = 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
 				var img = new Image();
 				img.onload = function() { ctx.drawImage(img, x, y); cb(canvas, obj); }
-				img.src = data;
+				img.src = url;
 			}
 
 			function makeTexture(w, h, color, textColor, text, fontSize, obj, cb) {
@@ -154,15 +154,14 @@
 				ctx.fillStyle = color;
 				ctx.fillRect(0, 0, w, h);
 
-				render_html = false;
-
+				var render_html = true;
 				if (render_html) {
-					var html = '<div style="word-wrap: break-word; display: table; padding: 0px; margin: 0px;'
+					var html = '<div style="display: table; padding: 0px; margin: 0px;'
 					+' color: '+textColor+'; background-color: '+ color
-					+'; font: '+fontSize+'px Arial;'
-					+'width: 100%; height: 256px; text-align: center; border 1px #000 solid;">'+
-					'<span style="  display: table-cell; width: 256px;'
-					+'vertical-align: middle; word-wrap: break-word;">'
+					+'; font: '+fontSize+'px Arial'
+					+'; width: 100%; height: 256px; text-align: center">'+
+					'<span style="display: table-cell; width: 256px'
+					+'; vertical-align: middle">'
 					+text.replace('\n','<br/>')+'</span></div>';
 					render_html_to_canvas(html, ctx, 0, 0, w, h, cb, canvas, obj);
 					return;
@@ -174,9 +173,6 @@
 				ctx.textAlign = 'center';
 				ctx.fillStyle = textColor;
 				ctx.fillText(text, tx, ty);
-				ctx.fillStyle = color;
-				ctx.fillRect(0, 0, 10, h);
-				ctx.fillRect(w-10, 0, 10, h);
 				cb(canvas, obj);
 			}
 
