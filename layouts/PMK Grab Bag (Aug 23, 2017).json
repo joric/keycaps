@@ -1,5 +1,4 @@
-sets[sets.length]=
-[
+sets[sets.length]=[
   {
     "name": "PMK Grab Bag (Aug 23, 2017)",
     "author": "Joric",
@@ -427,7 +426,7 @@ sets[sets.length]=
       "t": "#ffffff",
       "f": 7
     },
-    "DT"
+    "🅳T"
   ],
   [
     {
