@@ -145,7 +145,6 @@
 
 			function makeTexture(w, h, color, textColor, text, fontSize, obj, cb) {
 				fontSize = fontSize*fontSize+60;
-				text = text.replace('\n','<br/>');
 
 				var canvas = document.createElement( 'canvas' );
 				canvas.width = w;
@@ -155,14 +154,30 @@
 				ctx.fillStyle = color;
 				ctx.fillRect(0, 0, w, h);
 
-				var html = '<div style="word-wrap: break-word; display: table; padding: 0px; margin: 0px;'
+				render_html = false;
+
+				if (render_html) {
+					var html = '<div style="word-wrap: break-word; display: table; padding: 0px; margin: 0px;'
 					+' color: '+textColor+'; background-color: '+ color
 					+'; font: '+fontSize+'px Arial;'
 					+'width: 100%; height: 256px; text-align: center; border 1px #000 solid;">'+
 					'<span style="  display: table-cell; width: 256px;'
-					+'vertical-align: middle; word-wrap: break-word;">'+text+'</span></div>';
+					+'vertical-align: middle; word-wrap: break-word;">'
+					+text.replace('\n','<br/>')+'</span></div>';
+					render_html_to_canvas(html, ctx, 0, 0, w, h, cb, canvas, obj);
+					return;
+				}
 
-				render_html_to_canvas(html, ctx, 0, 0, w, h, cb, canvas, obj);
+				var tx = canvas.width / 2;
+				var ty = canvas.height / 2 + fontSize / 3;
+				ctx.font = ''+fontSize+'px Arial';
+				ctx.textAlign = 'center';
+				ctx.fillStyle = textColor;
+				ctx.fillText(text, tx, ty);
+				ctx.fillStyle = color;
+				ctx.fillRect(0, 0, 10, h);
+				ctx.fillRect(w-10, 0, 10, h);
+				cb(canvas, obj);
 			}
 
 			function profile_row(profile, row, rows) {
