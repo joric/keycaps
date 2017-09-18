@@ -18,12 +18,12 @@
 
 		<script>sets=[]</script>
 		<script src="layouts/Keycap Profiles.json"></script>
-		<script src="layouts/Symbolics-364000.json"></script>
 		<script src="layouts/Default 60.json"></script>
 		<script src="layouts/PMK Grab Bag (Aug 23, 2017).json"></script>
 		<script src="layouts/GB-Retro-DSA.json"></script>
 		<script src="layouts/ANSI 104.json"></script>
 		<script src="layouts/Leopold FC660m.json"></script>
+		<script src="layouts/Symbolics-364000.json"></script>
 
 		<div class="controls">
 			<input type="file" id="files" name="files[]" multiple="multiple" accept=".json"/>
@@ -130,18 +130,26 @@
 			}
 
 			function makeTexture(w, h, color, textColor, text, fontSize) {
+				fontSize = fontSize*fontSize+50;
+
 				var canvas = document.createElement( 'canvas' );
 				canvas.width = w;
 				canvas.height = h;
+
 				var ctx = canvas.getContext( '2d' );
 				ctx.fillStyle = color;
 				ctx.fillRect(0, 0, w, h);
+
 				var tx = canvas.width / 2;
-				var ty = canvas.height / 2 + fontSize / 4;
-				ctx.font = 'Bold '+fontSize+'px Arial';
+				var ty = canvas.height / 2 + fontSize / 3;
+				ctx.font = ''+fontSize+'px Arial';
 				ctx.textAlign='center';
 				ctx.fillStyle = textColor;
 				ctx.fillText(text, tx, ty);
+
+				ctx.fillStyle = color;
+				ctx.fillRect(0, 0, 10, h);
+				ctx.fillRect(w-10, 0, 10, h);
 				return canvas;
 			}
 
@@ -185,7 +193,7 @@
 				obj = obj ? obj.clone() : scene.getObjectByName(profile+' R1').clone();
 
 				obj.material = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x101010, wireframe: false } )
-				obj.material.map = new THREE.Texture(makeTexture(256, 256, prop.c, prop.t, caption, prop.f*2+45));
+				obj.material.map = new THREE.Texture(makeTexture(256, 256, prop.c, prop.t, caption, prop.f));
 				obj.material.map.needsUpdate = true;
 
 				s = 19;
