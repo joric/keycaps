@@ -17,9 +17,10 @@
 		<script src="keycaps.json"></script>
 
 		<script>sets=[]</script>
+		<script src="layouts/PMK Grab Bag (Aug 23, 2017).json"></script>
 		<script src="layouts/Keycap Profiles.json"></script>
 		<script src="layouts/Default 60.json"></script>
-		<script src="layouts/PMK Grab Bag (Aug 23, 2017).json"></script>
+
 		<script src="layouts/GB-Retro-DSA.json"></script>
 		<script src="layouts/ANSI 104.json"></script>
 		<script src="layouts/Leopold FC660m.json"></script>
@@ -156,13 +157,12 @@
 
 				var render_html = true;
 				if (render_html) {
-					var html = '<div style="display: table; padding: 0px; margin: 0px;'
-					+' color: '+textColor+'; background-color: '+ color
-					+'; font: '+fontSize+'px Arial'
-					+'; width: 100%; height: 256px; text-align: center">'+
-					'<span style="display: table-cell; width: 256px'
-					+'; vertical-align: middle">'
-					+text.replace('\n','<br/>')+'</span></div>';
+					var html = '<div style="display: table-cell; text-align: center; vertical-align: middle;'
+					//+'border: 1px solid black;'
+					+'color: '+textColor+'; background-color: '+ color
+					+';font: '+fontSize+'px Arial'
+					+';width: 256px; height: 240px;">'+
+					'<span style="word-break: break-all;">'+text.replace('\n','<br/>')+'</span></div>';
 					render_html_to_canvas(html, ctx, 0, 0, w, h, cb, canvas, obj);
 					return;
 				}
@@ -209,6 +209,10 @@
 					if (prop.w==2) rs='R1';
 				}
 
+				if (profile=='DCS' && rs=='R4') {
+					if (prop.w==2) rs='R1';
+				}
+
 				var id = rs + ( prop.w>1 ? ' '+prop.w : '');
 				var name = space ? (profile+' SPACE' ) : (profile + ' ' + id);
 
@@ -220,6 +224,7 @@
 
 				makeTexture(256, 256, prop.c, prop.t, caption, prop.f, obj, function(canvas, obj) {
 					obj.material = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x101010, wireframe: false } )
+					//obj.material = new THREE.MeshLambertMaterial(  { color: 0xffffff } );
 					obj.material.map = new THREE.Texture(canvas);
 					obj.material.map.needsUpdate = true;
 					scene.add(obj);
