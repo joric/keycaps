@@ -32,6 +32,7 @@ All copyrights to resource files belong to their respective owners.
 
 ## References
 
+* Keyboard Layout Editor https://github.com/ijprest/keyboard-layout-editor
 * JavaScript 3D library https://github.com/mrdoob/three.js
 * OpenSCAD models: https://github.com/rsheldiii/openSCAD-projects
 * OpenSCAD models: https://github.com/getclacking/SA-profile-keys-3D-models
