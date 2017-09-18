@@ -9,7 +9,7 @@ echo rendering...
 
 echo start time: %time%
 
-goto sa_mods
+goto g20
 
 :dcs
 openscad.exe -Dprofile=0 -Drow=1 -o "..\render\DCS R1.stl" render.scad
@@ -31,7 +31,6 @@ openscad.exe -Dprofile=1 -Dspacebar=1 -Drow=1 -o "..\render\DCS SPACE.stl" rende
 openscad.exe -Dprofile=1 -Drow=1 -o ..\render\DSA R1.stl render.scad
 
 :g20
-openscad.exe -Dprofile=3 -Drow=1 -o "..\render\G20 R1.stl" render.scad
 openscad.exe -Dprofile=3 -Drow=3 -o "..\render\G20 R3.stl" render.scad
 
 :sa

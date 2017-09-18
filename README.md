@@ -18,6 +18,7 @@ Texture UVs assigned from Blender, using "Project from View (Bounds)" for visibl
 
 There's also a 2D editor, images taken from https://github.com/CQCumbers/kle_render.
 
-All copyrights to resource files belong to their respective owners.
+Also some ideas are taken from repository: https://github.com/getclacking/SA-profile-keys-3D-models
 
+All copyrights to resource files belong to their respective owners.
 

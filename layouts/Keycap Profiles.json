@@ -1,5 +1,4 @@
-sets[sets.length]=
-[
+sets[sets.length]=[
   {
     "name": "Keycap Profiles",
     "author": "Joric"
@@ -15,15 +14,7 @@ sets[sets.length]=
     },
     "SA R1",
     {
-      "x": 1,
-      "c": "#ffffff",
-      "t": "#000000",
-      "p": "G20 R1"
-    },
-    "G20 R1",
-    {
-      "c": "#404040",
-      "t": "#ffffff",
+      "x": 2,
       "p": "DCS R1"
     },
     "DCS R1"

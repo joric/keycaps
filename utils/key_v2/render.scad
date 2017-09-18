@@ -330,8 +330,8 @@ module rounded_cherry_key() {
   keytop();
 }
 
-spacebar=1;
-profile=2;
+spacebar=0;
+profile=1;
 row=1;
 w = 1.0;
 
