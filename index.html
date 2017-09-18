@@ -17,13 +17,13 @@
 		<script src="keycaps.json"></script>
 
 		<script>sets=[]</script>
+		<script src="layouts/Symbolics-364000.json"></script>
 		<script src="layouts/Keycap Profiles.json"></script>
 		<script src="layouts/Default 60.json"></script>
 		<script src="layouts/PMK Grab Bag (Aug 23, 2017).json"></script>
 		<script src="layouts/GB-Retro-DSA.json"></script>
 		<script src="layouts/ANSI 104.json"></script>
 		<script src="layouts/Leopold FC660m.json"></script>
-		<script src="layouts/Symbolics-364000.json"></script>
 
 		<div class="controls">
 			<input type="file" id="files" name="files[]" multiple="multiple" accept=".json"/>
@@ -36,6 +36,7 @@
 			var container, stats;
 			var camera, cameraTarget, scene, renderer;
 			var geometries = [];
+			var obj_names = [];
 
 			init();
 			animate();
@@ -47,10 +48,12 @@
 				pointLight = new THREE.PointLight( 0xffffff );
 				pointLight.position.set(1,1,2);
 				camera.add(pointLight);
+				obj_names = [];
 				scene.traverse( function(obj) {
 					if ( obj instanceof THREE.Mesh ) {
 						obj.geometry.scale(-1,-1,1);
 						obj.visible = false;
+						obj_names.push(obj.name);
 					}
 				});
 				camera.up.set( 0, 0, 1 );
@@ -142,10 +145,18 @@
 				return canvas;
 			}
 
+			function profile_row(profile, row, rows) {
+				if (profile=='SA') return 3;
+				if (rows==6) return [1,1,2,3,4,4][row];
+				else if (rows==5) return [1,2,3,4,4][row];
+				return row>3 ? 4 : Math.floor(row+1);
+			}
+
 			function add_keycap(x, y, prop, caption, row, rows) {
 				var profile = 'DCS';
 				var space = prop.w>=6.25;
 				rs = '';
+
 				['DCS','DSA','SA','G20'].forEach(function(s) {if (prop.p.startsWith(s)) profile = s; });
 				['R1','R2','R3','R4'].forEach( function(s) { if (prop.p.includes(' '+s)) rs = s; });
 
@@ -157,28 +168,30 @@
 				//if (profile=='SA' && rs=='R3') rs='R3.001';
 				//if (profile=='DSA' && rs=='R3') rs='R3.001';
 
-				if (rs=='') {
-					var r = y>3 ? 4 : Math.floor(row+1);
-					if (rows==6) {
-						r = [1,1,2,3,4,4][row];
-					} else if (rows==5) {
-						r = [1,2,3,4,4][row];
-					}
-					rs = 'R' + r;
+				var r = profile_row(profile, row, rows);
+
+				if (rs=='') rs = 'R' + r;
+
+				if (profile=='SA' && rs=='R3') {
+					if (prop.w==1.5) rs='R2';
+					if (prop.w==1.25) rs='R4';
+					if (prop.w==2) rs='R1';
 				}
 
-				//console.log(profile,rs,prop.w);
-
-				var name = space ? (profile+' SPACE' ) : profile + ' ' + rs + ( prop.w>1 ? ' '+prop.w : '');
+				var id = rs + ( prop.w>1 ? ' '+prop.w : '');
+				var name = space ? (profile+' SPACE' ) : (profile + ' ' + id);
 
 				var obj = scene.getObjectByName(name);
 				obj = obj ? obj.clone() : scene.getObjectByName(profile+' R1').clone();
-				obj.visible = true;
-				s = 19;
-				obj.position.set(142 - (x+prop.w/2)*s, 0, 50-y*s);
+
 				obj.material = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x101010, wireframe: false } )
 				obj.material.map = new THREE.Texture(makeTexture(256, 256, prop.c, prop.t, caption, prop.f*2+45));
 				obj.material.map.needsUpdate = true;
+
+				s = 19;
+				obj.position.set(142 - (x+prop.w/2)*s, 0, 50-y*s);
+				obj.visible = true;
+
 				scene.add(obj);
 			}
 
