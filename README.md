@@ -19,8 +19,8 @@ while DCS is rendered in a few seconds (see utils directory). Rendering time can
 
 Rendered .stl files are then processed with Blender's "Decimate" and "Edge Split" modifiers.
 Smoothing groups ("Auto Smooth") do not get exported so I had to use Edge Split geometry modifier.
-Texture UVs assigned from Blender, using ""Project from View" and "Project from View (Bounds)" for visible geometry.
-All modifer stacks should be collapsed for proper exporting.
+Texture UVs assigned from Blender, using "Project from View" and "Project from View (Bounds)" for
+the selected visible geometry. All modifer stacks should be collapsed for proper exporting.
 
 
 ## License
