@@ -38,31 +38,43 @@
 			var obj_names = [];
 			var antialias = !!location.hostname;
 			var mouse = { x: 0, y: 0, pressed: false }, selected;
+			var selectTimer = null;
 
-			document.addEventListener('mousedown', function(event) { 
-				mouse.pressed = true;
+			function pickObject() {
 				var vector = new THREE.Vector3(mouse.x, mouse.y, 1);
 				vector.unproject(camera);
 				var ray = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
 				var intersects = ray.intersectObjects(scene.children);
-				if (intersects.length > 0 && mouse.pressed) {
-					if (intersects[0].object != selected) {
-						if (selected) selected.material.color.setHex(selected.currentHex);
-						selected = intersects[0].object;
-						selected.currentHex = selected.material.color.getHex();
-						selected.material.color.setHex(0xff0000);
-					}
-				} else {
-					if (selected) selected.material.color.setHex(selected.currentHex);
+				return intersects.length ? intersects[0].object : null;
+			}
+
+			document.addEventListener('mousedown', function(event) {
+				mouse.pressed = true;
+
+				if (selected) {
+					selected.material.color.setHex(selected.currentHex);
 					selected = null;
 				}
+
+				selectTimer = setTimeout(function() {
+					obj = pickObject();
+					if (obj && obj!=selected) {
+						if (selected) selected.material.color.setHex(selected.currentHex);
+						selected = obj;
+						selected.currentHex = selected.material.color.getHex();
+						selected.material.color.setHex(0xff0000);
+					}	
+				}, 500);
+
 			}, false);
 
 			document.addEventListener('mouseup', function(event) {
+				clearTimeout(selectTimer);
 				mouse.pressed = false;
 			}, false);
 
 			document.addEventListener('mousemove', function(event) {
+				clearTimeout(selectTimer);
 				mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
 				mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 			}, false);
@@ -113,24 +125,17 @@
 					}
 				});
 
-				var ctrl = document.getElementById('preset');
-				ctrl.addEventListener('change', function(evt) {
-					var x = document.getElementById('preset');
-					deserialize(sets[x.options[x.selectedIndex].value]);
+				document.getElementById('preset').addEventListener('change', function(evt) {
+					deserialize(sets[this.selectedIndex]);
 				}, false);
 
-				var scripts = document.body.getElementsByTagName('script');
-				var j = 0;
-				for (var i = 0; i < scripts.length; i++) {
-					var s = /.*\/(.*)\.json$/.exec(scripts[i].getAttribute('src'));
-					if (s) {
+				[].slice.call(document.getElementsByTagName('script')).forEach(function(obj) {
+					if (obj.src.includes('layouts')) {
 						var option = document.createElement('option');
-						option.text = s[1];
-						option.value = j;
-						ctrl.add(option);
-						j++;
+						option.text = obj.getAttribute('src').split('/').pop();
+						document.getElementById('preset').add(option);
 					}
-				}
+				});
 
 				container = document.createElement( 'div' );
 				document.body.appendChild( container );
@@ -157,7 +162,6 @@
 			function render() {
 				renderer.render( scene, camera );
 			}
-
 
 			function render_html_to_canvas(html, ctx, x, y, w, h, cb, canvas, obj) {
 				var doc = document.implementation.createHTMLDocument('');
