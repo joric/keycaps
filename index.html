@@ -51,13 +51,15 @@
 			document.addEventListener('mousedown', function(event) {
 				mouse.pressed = true;
 
-				if (selected) {
+				var obj = pickObject();
+
+				if (selected && obj!=selected) {
 					selected.material.color.setHex(selected.currentHex);
 					selected = null;
 				}
 
 				selectTimer = setTimeout(function() {
-					obj = pickObject();
+					var obj = pickObject();
 					if (obj && obj!=selected) {
 						if (selected) selected.material.color.setHex(selected.currentHex);
 						selected = obj;
