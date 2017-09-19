@@ -37,6 +37,35 @@
 			var camera, cameraTarget, scene, renderer;
 			var obj_names = [];
 			var antialias = !!location.hostname;
+			var mouse = { x: 0, y: 0, pressed: false }, selected;
+
+			document.addEventListener('mousedown', function(event) { 
+				mouse.pressed = true;
+				var vector = new THREE.Vector3(mouse.x, mouse.y, 1);
+				vector.unproject(camera);
+				var ray = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
+				var intersects = ray.intersectObjects(scene.children);
+				if (intersects.length > 0 && mouse.pressed) {
+					if (intersects[0].object != selected) {
+						if (selected) selected.material.color.setHex(selected.currentHex);
+						selected = intersects[0].object;
+						selected.currentHex = selected.material.color.getHex();
+						selected.material.color.setHex(0xff0000);
+					}
+				} else {
+					if (selected) selected.material.color.setHex(selected.currentHex);
+					selected = null;
+				}
+			}, false);
+
+			document.addEventListener('mouseup', function(event) {
+				mouse.pressed = false;
+			}, false);
+
+			document.addEventListener('mousemove', function(event) {
+				mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+				mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+			}, false);
 
 			init();
 			animate();
