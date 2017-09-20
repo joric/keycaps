@@ -4,7 +4,7 @@ set path=C:\Program Files\Blender Foundation\Blender;%path%
 
 set script=D:\lib\three.js\utils\exporters\blender\tests\scripts\exporter.py
 set blend=%~dp0\blender\keycaps.blend
-set json=%~dp0\..\keycaps.json
+set json=%~dp0\..\models\keycaps.json
 
 del %json%
 
