@@ -158,7 +158,7 @@
 				var center = bounds.getCenter();
 				var radius = Math.max(size.x, Math.max(size.y, size.z));
 				controls.target.copy(center);
-				var newpos = new THREE.Vector3(center.x, center.y + radius*2.5, center.z);
+				var newpos = new THREE.Vector3(center.x, center.y + radius*2, center.z);
 				moveAndLookAt(camera, newpos, center)
 			}
 
@@ -304,6 +304,7 @@
 				ctx.textAlign = 'center';
 				ctx.fillStyle = textColor;
 				ctx.fillText(text, tx, ty);
+
 				cb(canvas, obj);
 			}
 
@@ -353,6 +354,8 @@
 
 				if (prop.h==2) { profile='DCS'; rs='PLUS'; }
 
+				if (rs!='R2' && prop.w==1.5) rs='R2';
+
 				var id = rs + ( prop.w>1 ? ' '+prop.w : '');
 				var name = space ? (profile+' SPACE' ) : (profile + ' ' + id);
 
@@ -362,10 +365,18 @@
 				var p = GetXY(x, y, prop);
 				var c = GetXY(prop.rx, prop.ry, prop);
 
-				var a = prop.r*Math.PI/180;
-				var b = Math.PI/2;
-				obj.rotation.set(-b,0,b*2+a);
-				obj.position.set(p.x, 0, p.y);
+				obj.angle = prop.r;
+
+				if (0){//(prop.r!=0) {
+					var a = prop.r*Math.PI/180;
+					var b = Math.PI/2;
+					//obj.rotation.set(-b,0,b*2+a);
+					var euler = new THREE.Euler( 0, 0, a, 'XYZ' );
+					obj.position.set(p.x, 0, p.y);
+					obj.position.applyEuler(euler);
+				} else {
+					obj.position.set(p.x, 0, p.y);
+				}
 
 				obj.visible = true;
 
@@ -374,6 +385,10 @@
 					//obj.material = new THREE.MeshLambertMaterial( { color: 0xffffff } );
 					obj.material.map = new THREE.Texture(canvas);
 					obj.material.map.needsUpdate = true;
+
+					if (obj.angle>0) obj.material.color.setHex(0x00ff00);
+					if (obj.angle<0) obj.material.color.setHex(0x0000ff);
+
 					scene.add(obj);
 					loadedKeycaps++;
 				});
@@ -386,6 +401,7 @@
 				var prop = {c:0,t:0,p:'',rx:0,ry:0,r:0,a:0,f:0,x:0,y:0,sm:'',w:1,h:1,c:'#ffffff',t:'#000000'};
 				var rows = 0;
 				var row = 0;
+				var rx = 0,ry = 0;
 				totalKeycaps = 0;
 				loadedKeycaps = 0;
 				data.forEach(function(o) {if (Array.isArray(o)) rows++; });
@@ -399,12 +415,17 @@
 								prop.w = prop.h = 1;
 							} else {
 								Object.keys(e).forEach(function(key) { prop[key] = e[key]; });
+								if (prop.rx) rx = prop.rx;
+								if (prop.ry) ry = prop.ry;
+								if (prop.rx || prop.ry) y = ry;
+								if (prop.rx) x = prop.rx;
+								prop.rx = prop.ry = undefined;
 								x += prop.x;
 								y += prop.y;
 								prop.x = prop.y = 0;
 							}
 						});
-						x = 0;
+						x = rx;
 						y++;
 						row++;
 					}
