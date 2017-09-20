@@ -18,6 +18,7 @@
 		<script src="models/keycaps.json"></script>
 
 		<script>sets=[]</script>
+		<script src="layouts/debug.json"></script>
 		<script src="layouts/Keycap Profiles.json"></script>
 		<script src="layouts/Default 60.json"></script>
 		<script src="layouts/ANSI 104.json"></script>
@@ -34,10 +35,11 @@
 		<div class="info"><a href="https://github.com/joric/keycaps">github</a></div>
 
 		<script>
+			var debug = !location.hostname;
 			var container, stats;
 			var camera, cameraTarget, scene, renderer;
 			var obj_names = [];
-			var antialias = !!location.hostname;
+			var antialias = debug ? false : true;
 			var mouse = { x:0, y:0, pressed: false, moved: false, clicks: 0 }
 			var selected;
 			var selectTimer = null;
@@ -238,7 +240,7 @@
 				}, false);
 
 				[].slice.call(document.getElementsByTagName('script')).forEach(function(obj) {
-					if (obj.src.includes('layouts')) {
+					if (obj.src.includes('layouts') && (!obj.src.includes('debug') || debug)) {
 						var option = document.createElement('option');
 						option.text = obj.getAttribute('src').replace(/^.*\/|\.\w+$/g,'');
 						document.getElementById('preset').add(option);
