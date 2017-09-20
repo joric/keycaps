@@ -9,7 +9,7 @@ echo rendering...
 
 echo start time: %time%
 
-goto g20
+goto dcs_numpad
 
 :dcs
 openscad.exe -Dprofile=0 -Drow=1 -o "..\render\DCS R1.stl" render.scad
@@ -50,6 +50,8 @@ openscad.exe -Dprofile=2 -Drow=4 -Dw=1.25 -o "..\render\SA R4 1.25.stl" render.s
 goto end
 openscad.exe -Dspacebar=1 -Dprofile=2 -Drow=3 -o "..\render\SA SPACE.stl" render.scad
 
+:dcs_numpad
+openscad.exe -Dprofile=0 -Drow=3 -Dw=1 -Dh=2 -o "..\render\DCS PLUS.stl" render.scad
 
 :end
 echo end time: %time%

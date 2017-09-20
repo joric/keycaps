@@ -20,9 +20,9 @@
 		<script>sets=[]</script>
 		<script src="layouts/Keycap Profiles.json"></script>
 		<script src="layouts/Default 60.json"></script>
+		<script src="layouts/ANSI 104.json"></script>
 		<script src="layouts/PMK Grab Bag (Aug 23, 2017).json"></script>
 		<script src="layouts/GB-Retro-DSA.json"></script>
-		<script src="layouts/ANSI 104.json"></script>
 		<script src="layouts/Leopold FC660m.json"></script>
 		<script src="layouts/Symbolics-364000.json"></script>
 
@@ -314,6 +314,13 @@
 				return row>3 ? 4 : Math.floor(row+1);
 			}
 
+			function GetXY(x, y, prop) {
+				s = 19;
+				var ox = 142-(x+prop.w/2)*s;
+				var oy = 50-(y+prop.h/2)*s;
+				return {x:ox, y:oy};
+			}
+
 			function add_keycap(x, y, prop, caption, row, rows) {
 				var profile = 'DCS';
 				var space = prop.w>=6.25;
@@ -344,15 +351,23 @@
 					if (prop.w==2) rs='R1';
 				}
 
+				if (prop.h==2) { profile='DCS'; rs='PLUS'; }
+
 				var id = rs + ( prop.w>1 ? ' '+prop.w : '');
 				var name = space ? (profile+' SPACE' ) : (profile + ' ' + id);
 
 				var obj = scene.getObjectByName(name);
 				obj = obj ? obj.clone() : scene.getObjectByName(profile+' R1').clone();
-				s = 19;
-				obj.position.set(142 - (x+prop.w/2)*s, 0, 50-y*s);
-				obj.visible = true;
 
+				var p = GetXY(x, y, prop);
+				var c = GetXY(prop.rx, prop.ry, prop);
+
+				var a = prop.r*Math.PI/180;
+				var b = Math.PI/2;
+				obj.rotation.set(-b,0,b*2+a);
+				obj.position.set(p.x, 0, p.y);
+
+				obj.visible = true;
 
 				makeTexture(256, 256, prop.c, prop.t, caption, prop.f, obj, function(canvas, obj) {
 					obj.material = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x101010, wireframe: false } )
@@ -368,7 +383,7 @@
 				initScene();
 				var x = 0;
 				var y = 0;
-				var prop = {c:0,t:0,p:'',a:0,f:0,x:0,y:0,sm:'',w:1,h:1,c:'#ffffff',t:'#000000'};
+				var prop = {c:0,t:0,p:'',rx:0,ry:0,r:0,a:0,f:0,x:0,y:0,sm:'',w:1,h:1,c:'#ffffff',t:'#000000'};
 				var rows = 0;
 				var row = 0;
 				totalKeycaps = 0;
@@ -414,3 +429,4 @@
 		</script>
 	</body>
 </html>
+/

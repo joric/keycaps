@@ -334,8 +334,9 @@ spacebar=0;
 profile=1;
 row=1;
 w = 1.0;
+h = 1.0;
 
-echo("profile/row/w:", profile, row, w);
+echo("profile/row/w/h:", profile, row, w, h);
 
 
 if (spacebar==1 && profile==0) {
@@ -343,13 +344,13 @@ if (spacebar==1 && profile==0) {
 } else if (spacebar==1 && profile==2) {
 	spacebar() sa_row(row) rounded_cherry_key();
 } else if (profile==0) {
-	translate_u(0, 0) u(w) dcs_row(row) rounded_cherry_key();
+	translate_u(0, 0) u(w) uh(h) dcs_row(row) rounded_cherry_key();
 } else if (profile==1) {
-	translate_u(0, 0) u(w) dsa_row(row) rounded_cherry_key();
+	translate_u(0, 0) u(w) uh(h) dsa_row(row) rounded_cherry_key();
 } else if (profile==2) {
-	translate_u(0, 0) u(w) sa_row(row) rounded_cherry_key();
+	translate_u(0, 0) u(w) uh(h) sa_row(row) rounded_cherry_key();
 } else if (profile==3) {
-	translate_u(0, 0) u(w) g20() rounded_cherry_key();
+	translate_u(0, 0) u(w) uh(h) g20() rounded_cherry_key();
 }
 
 
