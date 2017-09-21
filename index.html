@@ -42,18 +42,74 @@
 			var antialias = debug ? false : true;
 			var mouse = { x:0, y:0, pressed: false, moved: false, clicks: 0 }
 			var selected;
+			var hover;
 			var selectTimer = null;
 			var clickTimer = null;
 			var loadedKeycaps = 0;
 			var totalKeycaps = 0;
+			var sceneBounds = null;
 
 			function pickObject() {
 				var vector = new THREE.Vector3(mouse.x, mouse.y, 1);
 				vector.unproject(camera);
 				var ray = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
 				var intersects = ray.intersectObjects(scene.children);
-				return intersects.length ? intersects[0].object : null;
+				for (var i=0; i<intersects.length; i++) {
+					var obj = intersects[i].object;
+					if (obj.name!='bounds') return obj;
+				}
+				return null;
 			}
+
+			document.addEventListener('mousedown', function(event) {
+				mouse.xc = mouse.x;
+				mouse.yc = mouse.y;
+				mouse.pressed = true;
+				mouse.moved = false;
+				mouse.clicks++;
+				clickTimer = setTimeout(function() { mouse.clicks = 0; }, 300);
+			}, false);
+
+			document.addEventListener('mouseup', function(event) {
+				clearTimeout(selectTimer);
+				mouse.pressed = false;
+				if (mouse.clicks) {
+					var obj = pickObject();
+					if (obj) {
+						if (selected!=obj) {
+							selected = obj;
+							zoomIn(obj);
+						} else { 
+							selected = null;
+							zoomOut();
+						}
+					} else zoomOut();
+				}
+			}, false);
+
+			document.addEventListener('mousemove', function(event) {
+				clearTimeout(selectTimer);
+				mouse.moved = true;
+				mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+				mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+
+				if (!mouse.pressed) {
+					var obj = pickObject();
+					if (obj) {
+						if (hover && obj!=hover) {
+							if (hover.helper) hover.helper.visible = false;
+						}
+						if (obj.helper && debug) obj.helper.visible = true;
+						hover = obj;
+					} else {
+						if (hover && hover.helper) hover.helper.visible = false;
+					}
+					
+				}
+
+			}, false);
+
 
 			function moveAndLookAt(camera, dstpos, dstlookat) {
 				var origpos = new THREE.Vector3().copy(camera.position);
@@ -73,6 +129,24 @@
 					camera.position.lerpVectors(origpos, dstpos, o.t);
 					camera.quaternion.slerp(dest, o.t);
 				}).easing(TWEEN.Easing.Cubic.InOut).start();
+			}
+
+			function zoomIn(obj) {
+				var center = obj.position;
+				controls.target.copy(center);
+				var newpos = new THREE.Vector3(center.x, center.y+75, center.z);
+				moveAndLookAt(camera, newpos, center)
+			}
+
+			function zoomOut() {
+				if (!sceneBounds) return;
+				var bounds = sceneBounds;
+				var size = bounds.getSize();
+				var center = bounds.getCenter();
+				var radius = Math.max(size.x, Math.max(size.y, size.z));
+				controls.target.copy(center);
+				var newpos = new THREE.Vector3(center.x, center.y + radius*2, center.z);
+				moveAndLookAt(camera, newpos, center)
 			}
 
 			function computeSceneBounds(object) {
@@ -120,72 +194,6 @@
 				return {center: bounds.getCenter(), radius: radius};
 			}
 
-			document.addEventListener('mousedown', function(event) {
-				mouse.xc = mouse.x;
-				mouse.yc = mouse.y;
-				mouse.pressed = true;
-				mouse.moved = false;
-				mouse.clicks++;
-				clickTimer = setTimeout(function() { mouse.clicks = 0; }, 300);
-
-				var obj = pickObject();
-
-				if (selected && obj!=selected) {
-					selected.material.color.setHex(selected.currentHex);
-					selected = null;
-				}
-
-				selectTimer = setTimeout(function() {
-					var obj = pickObject();
-					if (obj && obj!=selected) {
-						if (selected) selected.material.color.setHex(selected.currentHex);
-						selected = obj;
-						selected.currentHex = selected.material.color.getHex();
-						selected.material.color.setHex(0xff0000);
-					}	
-				}, 500);
-
-			}, false);
-
-			function zoomIn(obj) {
-				var center = obj.position;
-				controls.target.copy(center);
-				var newpos = new THREE.Vector3(center.x, center.y+75, center.z);
-				moveAndLookAt(camera, newpos, center)
-			}
-
-			function zoomOut() {
-				var bounds = computeSceneBounds(scene);
-				var size = bounds.getSize();
-				var center = bounds.getCenter();
-				var radius = Math.max(size.x, Math.max(size.y, size.z));
-				controls.target.copy(center);
-				var newpos = new THREE.Vector3(center.x, center.y + radius*2, center.z);
-				moveAndLookAt(camera, newpos, center)
-			}
-
-			document.addEventListener('mouseup', function(event) {
-				clearTimeout(selectTimer);
-				mouse.pressed = false;
-
-				if (mouse.clicks) {
-					var obj = pickObject();
-					if (obj) {
-						zoomIn(obj);
-					} else {
-						zoomOut();
-					}
-				}
-
-			}, false);
-
-			document.addEventListener('mousemove', function(event) {
-				clearTimeout(selectTimer);
-				mouse.moved = true;
-				mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-				mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-			}, false);
-
 			init();
 			animate();
 
@@ -199,6 +207,8 @@
 				obj_names = [];
 				scene.traverse( function(obj) {
 					if ( obj instanceof THREE.Mesh ) {
+						obj.position.set(0,0,0);
+						//obj.rotation.set(0,0,0);
 						obj.geometry.scale(-1,-1,1);
 						obj.visible = false;
 						obj.geometry.computeBoundingBox();
@@ -392,6 +402,15 @@
 					if (obj.angle<0) obj.material.color.setHex(0x0000ff);
 
 					scene.add(obj);
+					var helper = new THREE.BoxHelper( obj );
+					scene.add( helper );
+					obj.helper = helper;
+					helper.name = 'bounds';
+					helper.visible = false;
+
+//					scene.add(new THREE.VertexNormalsHelper( obj ));
+//					scene.add(new THREE.AxisHelper( obj ));
+
 					loadedKeycaps++;
 				});
 			}
@@ -441,6 +460,12 @@
 
 				if (loadedKeycaps>0 && loadedKeycaps==totalKeycaps) {
 					loadedKeycaps = 0;
+					sceneBounds = computeSceneBounds(scene);
+					//scene.add(new THREE.BoxHelper(scene));
+					var helper = new THREE.Box3Helper(sceneBounds);
+					helper.name = 'bounds';
+					helper.visible = debug;
+					scene.add(helper);
 					zoomOut();
 				}
 			}
