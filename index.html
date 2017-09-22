@@ -131,10 +131,11 @@
 				}).easing(TWEEN.Easing.Cubic.InOut).start();
 			}
 
-			function zoomIn(obj) {
+			function zoomIn(obj, dist) {
+				dist = dist || 75;
 				var center = obj.position;
 				controls.target.copy(center);
-				var newpos = new THREE.Vector3(center.x, center.y+75, center.z);
+				var newpos = new THREE.Vector3(center.x, center.y+dist, center.z);
 				moveAndLookAt(camera, newpos, center)
 			}
 
@@ -145,7 +146,7 @@
 				var center = bounds.getCenter();
 				var radius = Math.max(size.x, Math.max(size.y, size.z));
 				controls.target.copy(center);
-				var newpos = new THREE.Vector3(center.x, center.y + radius*2, center.z);
+				var newpos = new THREE.Vector3(center.x, center.y + radius*2.2, center.z);
 				moveAndLookAt(camera, newpos, center)
 			}
 
