@@ -28,7 +28,8 @@
 		<script src="layouts/Symbolics-364000.json"></script>
 
 		<div class="controls">
-			<input type="file" id="files" name="files[]" multiple="multiple" accept=".json"/>
+			<input type="file" id="files" name="files[]" multiple="multiple" accept=".json" style="display:none"/>
+			<input type="button" value="Browse..." onclick="document.getElementById('files').click();" />
 			<select id="preset"></select>
 		</div>
 
