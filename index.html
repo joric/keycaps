@@ -39,7 +39,6 @@
 			var debug = !location.hostname;
 			var container, stats;
 			var camera, cameraTarget, scene, renderer;
-			var obj_names = [];
 			var antialias = debug ? false : true;
 			var mouse = { x:0, y:0, pressed: false, moved: false, clicks: 0 }
 			var selected;
@@ -54,7 +53,7 @@
 				var vector = new THREE.Vector3(mouse.x, mouse.y, 1);
 				vector.unproject(camera);
 				var ray = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
-				var intersects = ray.intersectObjects(scene.children);
+				var intersects = ray.intersectObjects(scene.getObjectByName('layouts').children);
 				for (var i=0; i<intersects.length; i++) {
 					var obj = intersects[i].object;
 					if (obj.name!='bounds') return obj;
@@ -80,7 +79,7 @@
 						if (selected!=obj) {
 							selected = obj;
 							zoomIn(obj);
-						} else { 
+						} else {
 							selected = null;
 							zoomOut();
 						}
@@ -106,7 +105,7 @@
 					} else {
 						if (hover && hover.helper) hover.helper.visible = false;
 					}
-					
+
 				}
 
 			}, false);
@@ -134,7 +133,10 @@
 
 			function zoomIn(obj, dist) {
 				dist = dist || 75;
-				var center = obj.position;
+				var layouts = scene.getObjectByName('layouts');
+				layouts.updateMatrixWorld();
+				var center = new THREE.Vector3();
+				center.setFromMatrixPosition( obj.matrixWorld );
 				controls.target.copy(center);
 				var newpos = new THREE.Vector3(center.x, center.y+dist, center.z);
 				moveAndLookAt(camera, newpos, center)
@@ -151,51 +153,6 @@
 				moveAndLookAt(camera, newpos, center)
 			}
 
-			function computeSceneBounds(object) {
-				var scope = new THREE.Box3();
-				var v1 = new THREE.Vector3();
-				object.updateMatrixWorld( true );
-				object.traverse( function ( node ) {
-					if (node instanceof THREE.Mesh && node.visible) {
-						var i, l;
-						var geometry = node.geometry;
-						if ( geometry !== undefined ) {
-							if ( geometry.isGeometry ) {
-								var vertices = geometry.vertices;
-								for ( i = 0, l = vertices.length; i < l; i ++ ) {
-									v1.copy( vertices[ i ] );
-									v1.applyMatrix4( node.matrixWorld );
-									scope.expandByPoint( v1 );
-								}
-							} else if ( geometry.isBufferGeometry ) {
-								var attribute = geometry.attributes.position;
-								if ( attribute !== undefined ) {
-									for ( i = 0, l = attribute.count; i < l; i ++ ) {
-										v1.fromBufferAttribute( attribute, i ).applyMatrix4( node.matrixWorld );
-										scope.expandByPoint( v1 );
-									}
-								}
-							}
-						}
-					}
-				});
-				return scope;
-			}
-
-			function computeSceneBounds2(scene) {
-				var bounds = new THREE.Box3();
-				scene.traverse(function (child) {
-					if (child instanceof THREE.Mesh && child.visible) {
-						var childbox = child.geometry.boundingBox.clone();
-						childbox.translate( child.localToWorld(new THREE.Vector3()));
-						bounds.union( childbox );
-					}
-				});
-				var size = bounds.getSize();
-				radius = Math.max(size.x, Math.max(size.y, size.z));
-				return {center: bounds.getCenter(), radius: radius};
-			}
-
 			init();
 			animate();
 
@@ -206,21 +163,25 @@
 				pointLight = new THREE.PointLight( 0xffffff );
 				pointLight.position.set(1,1,2);
 				camera.add(pointLight);
-				obj_names = [];
-				scene.traverse( function(obj) {
+
+				var keycaps = scene.getObjectByName('keycaps');
+				keycaps.visible = false;
+				keycaps.traverse( function(obj) {
 					if ( obj instanceof THREE.Mesh ) {
-						obj.position.set(0,0,0);
-						//obj.rotation.set(0,0,0);
+						obj.rotation.set(0,0,0);
 						obj.geometry.scale(-1,-1,1);
-						obj.visible = false;
-						obj.geometry.computeBoundingBox();
-						obj_names.push(obj.name);
 					}
 				});
-				camera.up.set( 0, 0, 1 );
+
+				if (!scene.getObjectByName('layouts')) {
+					var layouts = new THREE.Group();
+					layouts.name = 'layouts';
+					scene.add(layouts);
+					layouts.rotation.set(-Math.PI/2, 0,-Math.PI*2);
+				}
+
 				controls = new THREE.OrbitControls( camera, container );
 				scene.background = new THREE.Color( 0xdddddd );
-
 				camera.position.set(0,10000,0);
 			}
 
@@ -329,14 +290,16 @@
 				return row>3 ? 4 : Math.floor(row+1);
 			}
 
-			function GetXY(x, y, prop) {
+			function setXY(obj, x, y, prop) {
 				s = 19;
-				var ox = 142-(x+prop.w/2)*s;
-				var oy = 50-(y+prop.h/2)*s;
-				return {x:ox, y:oy};
+				var ox = (x+prop.w/2)*s;
+				var oy = -(y+prop.h/2)*s;
+				obj.position.set(ox, oy, 0);
 			}
 
 			function add_keycap(x, y, prop, caption, row, rows) {
+				var keycaps = scene.getObjectByName('keycaps');
+				var layout = scene.getObjectByName('layouts');
 				var profile = 'DCS';
 				var space = prop.w>=6.25;
 				rs = '';
@@ -373,46 +336,30 @@
 				var id = rs + ( prop.w>1 ? ' '+prop.w : '');
 				var name = space ? (profile+' SPACE' ) : (profile + ' ' + id);
 
-				var obj = scene.getObjectByName(name);
-				obj = obj ? obj.clone() : scene.getObjectByName(profile+' R1').clone();
-
-				var p = GetXY(x, y, prop);
-				var c = GetXY(prop.rx, prop.ry, prop);
+				var obj = keycaps.getObjectByName(name);
+				obj = obj ? obj.clone() : keycaps.getObjectByName(profile+' R1').clone();
 
 				obj.angle = prop.r;
 
-				if (0){//(prop.r!=0) {
-					var a = prop.r*Math.PI/180;
-					var b = Math.PI/2;
-					//obj.rotation.set(-b,0,b*2+a);
-					var euler = new THREE.Euler( 0, 0, a, 'XYZ' );
-					obj.position.set(p.x, 0, p.y);
-					obj.position.applyEuler(euler);
-				} else {
-					obj.position.set(p.x, 0, p.y);
-				}
+				setXY(obj, x, y, prop);
 
 				obj.visible = true;
 
 				makeTexture(256, 256, prop.c, prop.t, caption, prop.f, obj, function(canvas, obj) {
 					obj.material = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x101010, wireframe: false } )
-					//obj.material = new THREE.MeshLambertMaterial( { color: 0xffffff } );
 					obj.material.map = new THREE.Texture(canvas);
 					obj.material.map.needsUpdate = true;
 
 					if (obj.angle>0) obj.material.color.setHex(0x00ff00);
 					if (obj.angle<0) obj.material.color.setHex(0x0000ff);
 
-					scene.add(obj);
+					layout.add(obj);
+
 					var helper = new THREE.BoxHelper( obj );
 					scene.add( helper );
 					obj.helper = helper;
 					helper.name = 'bounds';
 					helper.visible = false;
-
-//					scene.add(new THREE.VertexNormalsHelper( obj ));
-//					scene.add(new THREE.AxisHelper( obj ));
-
 					loadedKeycaps++;
 				});
 			}
@@ -462,12 +409,12 @@
 
 				if (loadedKeycaps>0 && loadedKeycaps==totalKeycaps) {
 					loadedKeycaps = 0;
-					sceneBounds = computeSceneBounds(scene);
-					//scene.add(new THREE.BoxHelper(scene));
-					var helper = new THREE.Box3Helper(sceneBounds);
+					var layouts = scene.getObjectByName('layouts');
+					var helper = new THREE.BoxHelper(layouts);
 					helper.name = 'bounds';
 					helper.visible = debug;
 					scene.add(helper);
+					sceneBounds = new THREE.Box3().setFromObject(layouts);
 					zoomOut();
 				}
 			}

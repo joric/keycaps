@@ -10,7 +10,7 @@ del %json%
 
 echo exporting scene...
 
-blender %blend% --background --python %script% -- %json% --vertices --faces --normals --scene --lights --materials --uvs --embedGeometry --geometryType BufferGeometry --cameras >nul 2>&1
+blender %blend% --background --python %script% -- %json% --vertices --faces --normals --scene --bones --hierarchy --lights --materials --uvs --embedGeometry --geometryType BufferGeometry --cameras >nul 2>&1
 
 if exist "%json%" goto success
 
