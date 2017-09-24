@@ -93,7 +93,6 @@
 				mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
 				mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-
 				if (!mouse.pressed) {
 					var obj = pickObject();
 					if (obj) {
@@ -134,7 +133,6 @@
 			function zoomIn(obj, dist) {
 				dist = dist || 75;
 				var layouts = scene.getObjectByName('layouts');
-				layouts.updateMatrixWorld();
 				var center = new THREE.Vector3();
 				center.setFromMatrixPosition( obj.matrixWorld );
 				controls.target.copy(center);
@@ -292,7 +290,7 @@
 
 			function setXY(obj, x, y, prop) {
 				s = 19;
-				var ox = (x+prop.w/2)*s;
+				var ox = (x+prop.w/2)*s + s*6;
 				var oy = -(y+prop.h/2)*s;
 				obj.position.set(ox, oy, 0);
 			}
