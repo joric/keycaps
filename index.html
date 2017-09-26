@@ -33,6 +33,7 @@
 		<script src="layouts/GB-Retro-DSA.json"></script>
 		<script src="layouts/Leopold FC660m.json"></script>
 		<script src="layouts/Symbolics-364000.json"></script>
+		<script src="layouts/Atreus.json"></script>
 		<script src="layouts/Ergodox.json"></script>
 		<script src="layouts/Mitosis-MJT.json"></script>
 
@@ -374,13 +375,12 @@
 
 				var id = rs + ( w>1 ? ' '+w : '');
 
-				if (w==1 && h==1.5) { flip=true; id = 'R2 1.5';}
+				if (w==1 && h==1.5) { flip=true; id = 'R2 1.5'; }
 
 				var name = space ? (profile+' SPACE' ) : (profile + ' ' + id);
 
 				var obj = keycaps.getObjectByName(name);
 				obj = obj ? obj.clone() : keycaps.getObjectByName(profile+' R1').clone();
-
 
 				var o = getXY(x, y, w, h);
 
@@ -389,28 +389,27 @@
 					var az = -prop.r * Math.PI / 180.0;
 					obj.position.set(o.x, o.y, 0);
 
+					var m0 = new THREE.Matrix4();
 					var m1 = new THREE.Matrix4();
 					var m2 = new THREE.Matrix4();
 					var m3 = new THREE.Matrix4();
 					var m4 = new THREE.Matrix4();
 
-					m1.makeTranslation(c.x, c.y, 0);
-					m2.makeRotationZ(az);
-					m3.makeTranslation(-c.x, -c.y, 0);
-					m4.makeTranslation(o.x, o.y, 0);
+					m0.makeTranslation(c.x, c.y, 0);
+					m1.makeRotationZ(az);
+					m2.makeTranslation(-c.x, -c.y, 0);
+					m3.makeTranslation(o.x, o.y, 0);
 
-					obj.matrix = m1.multiply(m2).multiply(m3).multiply(m4);
+					m4.makeRotationZ(flip ? (prop.r>0 ? 1: -1 ) * Math.PI/2 : 0);
+
+					obj.matrix = m0.multiply(m1).multiply(m2).multiply(m3).multiply(m4);
 
 					obj.matrixAutoUpdate = false;
 				} else {
 					obj.position.set(o.x, o.y, 0);
+					if (flip)
+						obj.rotation.set(0,0,Math.PI/2);
 				}
-
-				if (flip) {
-					[w, h] = [h, w];
-					obj.rotation.set(0,0,Math.PI/2);
-				}
-
 
 				obj.angle = prop.r;
 
