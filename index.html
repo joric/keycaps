@@ -172,7 +172,7 @@
 				var dh = Math.abs(sh-h);
 				var dk = sw/w;
 
-				var dist = h*dk < sh ? wdist : hdist;
+				var dist = h*dk < sh ? wdist : hdist*1.3;
 
 				var newpos = new THREE.Vector3(center.x, center.y + dist*1.05, center.z+0.01);
 				moveAndLookAt(camera, newpos, center)
