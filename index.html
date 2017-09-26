@@ -12,13 +12,20 @@
 			.info { position: absolute; right: 10px; bottom: 10px; }
 		</style>
 
+		<script src="models/keycaps.json"></script>
+
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/87/three.min.js"></script>
 		<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
 		<script src="https://sole.github.io/tween.js/build/tween.min.js"></script>
-		<script src="models/keycaps.json"></script>
 
-		<script>sets=[]</script>
-		<script src="layouts/debug.json"></script>
+		<script>
+			var sets = [];
+			var antialias = true;
+			var show_helpers = false;
+		</script>
+
+		<script src="config.js"></script>
+
 		<script src="layouts/Keycap Profiles.json"></script>
 		<script src="layouts/Default 60.json"></script>
 		<script src="layouts/ANSI 104.json"></script>
@@ -26,6 +33,8 @@
 		<script src="layouts/GB-Retro-DSA.json"></script>
 		<script src="layouts/Leopold FC660m.json"></script>
 		<script src="layouts/Symbolics-364000.json"></script>
+		<script src="layouts/Ergodox.json"></script>
+		<script src="layouts/Mitosis-MJT.json"></script>
 
 		<div class="controls">
 			<input type="file" id="files" name="files[]" multiple="multiple" accept=".json" style="display:none"/>
@@ -36,10 +45,8 @@
 		<div class="info"><a href="https://github.com/joric/keycaps">github</a></div>
 
 		<script>
-			var debug = !location.hostname;
 			var container, stats;
 			var camera, cameraTarget, scene, renderer;
-			var antialias = debug ? false : true;
 			var mouse = { x:0, y:0, pressed: false, moved: false, clicks: 0 }
 			var selected;
 			var hover;
@@ -59,6 +66,12 @@
 					if (obj.name!='bounds') return obj;
 				}
 				return null;
+			}
+
+			function selectObject(obj, select) {
+				if (!obj) return;
+				obj.selected = true;
+				if (obj && obj.helper && show_helpers) obj.helper.visible = select;
 			}
 
 			document.addEventListener('mousedown', function(event) {
@@ -96,15 +109,12 @@
 				if (!mouse.pressed) {
 					var obj = pickObject();
 					if (obj) {
-						if (hover && obj!=hover) {
-							if (hover.helper) hover.helper.visible = false;
-						}
-						if (obj.helper && debug) obj.helper.visible = true;
+						if (hover && obj!=hover) selectObject(hover, false);
+						selectObject(obj, true);
 						hover = obj;
 					} else {
-						if (hover && hover.helper) hover.helper.visible = false;
+						selectObject(hover, false);
 					}
-
 				}
 
 			}, false);
@@ -136,7 +146,7 @@
 				var center = new THREE.Vector3();
 				center.setFromMatrixPosition( obj.matrixWorld );
 				controls.target.copy(center);
-				var newpos = new THREE.Vector3(center.x, center.y+dist, center.z);
+				var newpos = new THREE.Vector3(center.x, center.y+dist, center.z+0.01);
 				moveAndLookAt(camera, newpos, center)
 			}
 
@@ -145,9 +155,24 @@
 				var bounds = sceneBounds;
 				var size = bounds.getSize();
 				var center = bounds.getCenter();
-				var radius = Math.max(size.x, Math.max(size.y, size.z));
+
 				controls.target.copy(center);
-				var newpos = new THREE.Vector3(center.x, center.y + radius*2.2, center.z);
+
+				var sw = window.innerWidth;
+				var sh = window.innerHeight;
+				var w = size.x;
+				var h = size.z;
+
+				var hdist = h*2;
+				var wdist = w*sh/sw*2;
+
+				var dw = Math.abs(sw-w);
+				var dh = Math.abs(sh-h);
+				var dk = sw/w;
+
+				var dist = h*dk < sh ? wdist : hdist;
+
+				var newpos = new THREE.Vector3(center.x, center.y + dist*1.05, center.z+0.01);
 				moveAndLookAt(camera, newpos, center)
 			}
 
@@ -164,6 +189,7 @@
 
 				var keycaps = scene.getObjectByName('keycaps');
 				keycaps.visible = false;
+				keycaps.rotation.set(-Math.PI/2, 0,-Math.PI*2);
 				keycaps.traverse( function(obj) {
 					if ( obj instanceof THREE.Mesh ) {
 						obj.rotation.set(0,0,0);
@@ -181,6 +207,8 @@
 				controls = new THREE.OrbitControls( camera, container );
 				scene.background = new THREE.Color( 0xdddddd );
 				camera.position.set(0,10000,0);
+
+				
 			}
 
 
@@ -211,7 +239,7 @@
 				}, false);
 
 				[].slice.call(document.getElementsByTagName('script')).forEach(function(obj) {
-					if (obj.src.includes('layouts') && (!obj.src.includes('debug') || debug)) {
+					if (obj.src.includes('layouts')) {
 						var option = document.createElement('option');
 						option.text = obj.getAttribute('src').replace(/^.*\/|\.\w+$/g,'');
 						document.getElementById('preset').add(option);
@@ -288,18 +316,20 @@
 				return row>3 ? 4 : Math.floor(row+1);
 			}
 
-			function setXY(obj, x, y, prop) {
-				s = 19;
-				var ox = (x+prop.w/2)*s + s*6;
-				var oy = -(y+prop.h/2)*s;
-				obj.position.set(ox, oy, 0);
+			function getXY(x,y,w,h) {
+				s = 19.05; // 3/4 inch, precisely 19.05 mm
+				var ox = (x+w/2)*s;
+				var oy = -(y+h/2)*s;
+				return {x:ox, y:oy};
 			}
 
-			function add_keycap(x, y, prop, caption, row, rows) {
+			function add_keycap(x, y, prop, caption, row, rows, rx, ry) {
 				var keycaps = scene.getObjectByName('keycaps');
 				var layout = scene.getObjectByName('layouts');
 				var profile = 'DCS';
-				var space = prop.w>=6.25;
+				var w = prop.w, h = prop.h;
+				var space = w>=6.25;
+				var flip = false;
 				rs = '';
 
 				['DCS','DSA','SA','G20'].forEach(function(s) {if (prop.p.startsWith(s)) profile = s; });
@@ -318,47 +348,77 @@
 				if (rs=='') rs = 'R' + r;
 
 				if (profile=='SA' && rs=='R3') {
-					if (prop.w==1.5) rs='R2';
-					if (prop.w==1.25) rs='R4';
-					if (prop.w==2) rs='R1';
+					if (w==1.5) rs='R2';
+					if (w==1.25) rs='R4';
+					if (w==2) rs='R1';
 				}
 
 				if (profile=='DCS' && rs=='R4') {
-					if (prop.w==2) rs='R1';
+					if (w==2) rs='R1';
 				}
 
-				if (prop.h==2) { profile='DCS'; rs='PLUS'; }
+				if (h==2) { profile='DCS'; rs='PLUS'; }
 
-				if (rs!='R2' && prop.w==1.5) rs='R2';
+				if (rs!='R2' && w==1.5) rs='R2';
 
-				var id = rs + ( prop.w>1 ? ' '+prop.w : '');
+				var id = rs + ( w>1 ? ' '+w : '');
+
+				if (w==1 && h==1.5) { flip=true; id = 'R2 1.5';}
+
 				var name = space ? (profile+' SPACE' ) : (profile + ' ' + id);
 
 				var obj = keycaps.getObjectByName(name);
 				obj = obj ? obj.clone() : keycaps.getObjectByName(profile+' R1').clone();
 
+
+				var o = getXY(x, y, w, h);
+
+				if (prop.r!=0) {
+					c = getXY(rx, ry, 0, 0);
+					var az = -prop.r * Math.PI / 180.0;
+					obj.position.set(o.x, o.y, 0);
+
+					var m1 = new THREE.Matrix4();
+					var m2 = new THREE.Matrix4();
+					var m3 = new THREE.Matrix4();
+					var m4 = new THREE.Matrix4();
+
+					m1.makeTranslation(c.x, c.y, 0);
+					m2.makeRotationZ(az);
+					m3.makeTranslation(-c.x, -c.y, 0);
+					m4.makeTranslation(o.x, o.y, 0);
+
+					obj.matrix = m1.multiply(m2).multiply(m3).multiply(m4);
+
+					obj.matrixAutoUpdate = false;
+				} else {
+					obj.position.set(o.x, o.y, 0);
+				}
+
+				if (flip) {
+					[w, h] = [h, w];
+					obj.rotation.set(0,0,Math.PI/2);
+				}
+
+
 				obj.angle = prop.r;
-
-				setXY(obj, x, y, prop);
-
-				obj.visible = true;
 
 				makeTexture(256, 256, prop.c, prop.t, caption, prop.f, obj, function(canvas, obj) {
 					obj.material = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x101010, wireframe: false } )
 					obj.material.map = new THREE.Texture(canvas);
 					obj.material.map.needsUpdate = true;
+					//if (obj.angle>0) obj.material.color.setHex(0xaaffaa);
+					//if (obj.angle<0) obj.material.color.setHex(0xaaaaff);
 
-					if (obj.angle>0) obj.material.color.setHex(0x00ff00);
-					if (obj.angle<0) obj.material.color.setHex(0x0000ff);
+					obj.helper = new THREE.BoxHelper( obj );
+					obj.helper.visible = false;
+					obj.helper.name = 'bounds';
+					layout.add(obj.helper);
 
 					layout.add(obj);
 
-					var helper = new THREE.BoxHelper( obj );
-					scene.add( helper );
-					obj.helper = helper;
-					helper.name = 'bounds';
-					helper.visible = false;
 					loadedKeycaps++;
+
 				});
 			}
 
@@ -377,7 +437,7 @@
 					if (Array.isArray(o)) {
 						o.forEach(function(e) {
 							if (typeof e == 'string') {
-								add_keycap(x,y,prop,e,row,rows);
+								add_keycap(x,y,prop,e,row,rows, rx, ry);
 								totalKeycaps++;
 								x += prop.w;
 								prop.w = prop.h = 1;
@@ -410,7 +470,7 @@
 					var layouts = scene.getObjectByName('layouts');
 					var helper = new THREE.BoxHelper(layouts);
 					helper.name = 'bounds';
-					helper.visible = debug;
+					helper.visible = show_helpers;
 					scene.add(helper);
 					sceneBounds = new THREE.Box3().setFromObject(layouts);
 					zoomOut();
