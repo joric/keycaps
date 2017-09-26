@@ -19,7 +19,7 @@
 		<script src="https://sole.github.io/tween.js/build/tween.min.js"></script>
 
 		<script>
-			var sets = [];
+			var sets = {};
 			var antialias = true;
 			var show_helpers = false;
 		</script>
@@ -63,6 +63,7 @@
 				var intersects = ray.intersectObjects(scene.getObjectByName('layouts').children);
 				for (var i=0; i<intersects.length; i++) {
 					var obj = intersects[i].object;
+
 					if (obj.name!='bounds') return obj;
 				}
 				return null;
@@ -207,8 +208,6 @@
 				controls = new THREE.OrbitControls( camera, container );
 				scene.background = new THREE.Color( 0xdddddd );
 				camera.position.set(0,10000,0);
-
-				
 			}
 
 
@@ -234,17 +233,28 @@
 					}
 				});
 
-				document.getElementById('preset').addEventListener('change', function(evt) {
-					deserialize(sets[this.selectedIndex]);
+				var ctrl = document.getElementById('preset');
+
+				ctrl.addEventListener('change', function(evt) {
+					var setName = this[this.selectedIndex].value;
+					location.hash = setName;
+					deserialize(sets[setName]);
 				}, false);
 
-				[].slice.call(document.getElementsByTagName('script')).forEach(function(obj) {
-					if (obj.src.includes('layouts')) {
-						var option = document.createElement('option');
-						option.text = obj.getAttribute('src').replace(/^.*\/|\.\w+$/g,'');
-						document.getElementById('preset').add(option);
-					}
+				Object.keys(sets).forEach(function(key) {
+					var option = document.createElement('option');
+					option.text = key;
+					option.value = key;
+					ctrl.add(option);
 				});
+
+				var setName = location.hash ? location.hash.slice(1) : Object.keys(sets)[0];
+
+				var e = ctrl.getElementsByTagName('option');
+				for (var i=0; i<e.length; i++) {
+					e[i].selected = (setName === e[i].value);
+				}
+				setName = ctrl[ctrl.selectedIndex].value;
 
 				container = document.createElement( 'div' );
 				document.body.appendChild( container );
@@ -254,7 +264,7 @@
 				container.appendChild( renderer.domElement );
 				window.addEventListener( 'resize', onWindowResize, false );
 
-				deserialize(sets[0]);
+				deserialize(sets[setName]);
 			}
 
 			function onWindowResize() {
@@ -270,6 +280,7 @@
 				var xml = (new XMLSerializer).serializeToString(doc.body);
 				var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">' +
 					'<foreignObject width="100%" height="100%">'+xml+'</foreignObject></svg>';
+//console.log(svg);
 				var url = 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
 				var img = new Image();
 				img.onload = function() { ctx.drawImage(img, x, y); cb(canvas, obj); }
@@ -290,11 +301,11 @@
 				var render_html = true;
 				if (render_html) {
 					var html = '<div style="display: table-cell; text-align: center; vertical-align: middle;'
-					//+'border: 1px solid black;'
-					+'color: '+textColor+'; background-color: '+ color
-					+';font: '+fontSize+'px Arial'
+					//+'border: 1px solid white;'
+					+'color: '+textColor+'; background: '+ color
+					+';font: '+fontSize+'px Sans-Serif'
 					+';width: 256px; height: 240px;">'+
-					'<span style="word-break: break-all;">'+text.replace('\n','<br/>')+'</span></div>';
+					''+text.replace('\n','<br/>')+'</div>';
 					render_html_to_canvas(html, ctx, 0, 0, w, h, cb, canvas, obj);
 					return;
 				}
@@ -413,6 +424,7 @@
 					obj.helper = new THREE.BoxHelper( obj );
 					obj.helper.visible = false;
 					obj.helper.name = 'bounds';
+
 					layout.add(obj.helper);
 
 					layout.add(obj);
@@ -461,6 +473,7 @@
 			}
 
 			function animate() {
+
 				requestAnimationFrame( animate );
 				TWEEN.update();
 				render();
