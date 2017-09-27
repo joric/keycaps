@@ -360,12 +360,12 @@
 
 				var id = rs + ( w>1 ? ' '+w : '');
 
-				if (w==1 && h==1.5) { flip=true; id = 'R2 1.5'; }
+				if (w==1 && h==1.5) { flip=true; id = 'R2 1.5'; profile='DCS';}
 
 				var name = space ? (profile+' SPACE' ) : (profile + ' ' + id);
 
 				var obj = keycaps.getObjectByName(name);
-				obj = obj ? obj.clone() : keycaps.getObjectByName(profile+' R1').clone();
+				obj = obj ? obj.clone() : keycaps.getObjectByName(profile+' R3').clone();
 
 				var o = getXY(x, y, w, h);
 
