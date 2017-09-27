@@ -15,6 +15,7 @@
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/87/three.min.js"></script>
 		<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
 		<script src="https://sole.github.io/tween.js/build/tween.min.js"></script>
+		<script src="serial.js"></script>
 
 		<script>
 			var sets = {};
@@ -34,6 +35,7 @@
 		<script src="layouts/Atreus-62.json"></script>
 		<script src="layouts/Ergodox.json"></script>
 		<script src="layouts/Mitosis-MJT.json"></script>
+		<script src="layouts/Cytokinesis-G.json"></script>
 
 		<script>
 			var container, stats;
@@ -391,6 +393,7 @@
 					obj.matrix = m0.multiply(m1).multiply(m2).multiply(m3).multiply(m4);
 
 					obj.matrixAutoUpdate = false;
+
 				} else {
 					obj.position.set(o.x, o.y, 0);
 					if (flip)
@@ -398,6 +401,8 @@
 				}
 
 				obj.angle = prop.r;
+
+				//caption = x+'/'+y+'\n'+w+'/'+h+'\n'+rs;
 
 				makeTexture(256, 256, prop.c, prop.t, caption, prop.f, obj, function(canvas, obj) {
 					obj.material = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x101010, wireframe: false } )
@@ -409,7 +414,6 @@
 					obj.helper = new THREE.BoxHelper( obj );
 					obj.helper.visible = false;
 					obj.helper.name = 'bounds';
-
 					layout.add(obj.helper);
 
 					layout.add(obj);
@@ -421,39 +425,19 @@
 
 			function deserialize(data) {
 				initScene();
-				var x = 0;
-				var y = 0;
-				var prop = {c:0,t:0,p:'',rx:0,ry:0,r:0,a:0,f:0,x:0,y:0,sm:'',w:1,h:1,c:'#ffffff',t:'#000000'};
-				var rows = 0;
+				var keyboard = $serial.deserialize(data);
+				var rows = keyboard.keys.length;
 				var row = 0;
-				var rx = 0,ry = 0;
+				var y = 0;
 				totalKeycaps = 0;
-				loadedKeycaps = 0;
-				data.forEach(function(o) {if (Array.isArray(o)) rows++; });
-				data.forEach(function(o) {
-					if (Array.isArray(o)) {
-						o.forEach(function(e) {
-							if (typeof e == 'string') {
-								add_keycap(x,y,prop,e,row,rows, rx, ry);
-								totalKeycaps++;
-								x += prop.w;
-								prop.w = prop.h = 1;
-							} else {
-								Object.keys(e).forEach(function(key) { prop[key] = e[key]; });
-								if (prop.rx) rx = prop.rx;
-								if (prop.ry) ry = prop.ry;
-								if (prop.rx || prop.ry) y = ry;
-								if (prop.rx) x = prop.rx;
-								prop.rx = prop.ry = undefined;
-								x += prop.x;
-								y += prop.y;
-								prop.x = prop.y = 0;
-							}
-						});
-						x = rx;
-						y++;
-						row++;
-					}
+				keyboard.keys.forEach(function(k) {
+					//console.log(k);
+					var caption = k.labels.join('\n').replace(/\n{2+}/g, ' ').trim();
+					var prop = { r: k.rotation_angle, w:k.width, h:k.height, c:k.color, t:k.default.textColor, f:k.default.textSize, p:k.profile };
+					if (k.y!=y) row++;
+					add_keycap(k.x, k.y, prop, caption, row, rows, k.rotation_x, k.rotation_y);
+					totalKeycaps++;
+					y = k.y;
 				});
 			}
 
