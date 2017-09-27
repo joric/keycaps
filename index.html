@@ -15,7 +15,6 @@
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/87/three.min.js"></script>
 		<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
 		<script src="https://sole.github.io/tween.js/build/tween.min.js"></script>
-		<script src="serial.js"></script>
 
 		<script>
 			var sets = {};
@@ -425,23 +424,40 @@
 
 			function deserialize(data) {
 				initScene();
-				var keyboard = $serial.deserialize(data);
-				var rows = 1;
-				var row = 0;
+				var x = 0;
 				var y = 0;
+				var prop = {c:0,t:0,p:'',rx:0,ry:0,r:0,a:0,f:0,x:0,y:0,sm:'',w:1,h:1,c:'#ffffff',t:'#000000'};
+				var rows = 0;
+				var row = 0;
+				var rx = 0,ry = 0;
 				totalKeycaps = 0;
-				keyboard.keys.forEach(function(k) { if (k.y!=y) rows++; y = k.y; });
-				y = 0;
-				keyboard.keys.forEach(function(k) {
-					//console.log(k);
-					var caption = k.labels.join('\n').replace(/\n{2+}/g, ' ').trim();
-					var prop = { r: k.rotation_angle, w:k.width, h:k.height, c:k.color, t:k.default.textColor, f:k.default.textSize, p:k.profile };
-					if (k.y!=y) row++;
-					add_keycap(k.x, k.y, prop, caption, row, rows, k.rotation_x, k.rotation_y);
-					totalKeycaps++;
-					y = k.y;
+				loadedKeycaps = 0;
+				data.forEach(function(o) {if (Array.isArray(o)) rows++; });
+				data.forEach(function(o) {
+					if (Array.isArray(o)) {
+						o.forEach(function(e) {
+							if (typeof e == 'string') {
+								add_keycap(x,y,prop,e,row,rows, rx, ry);
+								totalKeycaps++;
+								x += prop.w;
+								prop.w = prop.h = 1;
+							} else {
+								Object.keys(e).forEach(function(key) { prop[key] = e[key]; });
+								if (prop.rx!=undefined) { rx = x = prop.rx; y = ry; }
+								if (prop.ry!=undefined) ry = y = prop.ry;
+								prop.rx = prop.ry = undefined;
+								x += prop.x;
+								y += prop.y;
+								prop.x = prop.y = 0;
+							}
+						});
+						x = rx;
+						y++;
+						row++;
+					}
 				});
 			}
+
 
 			function animate() {
 
