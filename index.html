@@ -4,8 +4,7 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 		<title>Keycaps</title>
-	</head>
-	<body>
+
 		<style>
 			body { padding: 0; margin: 0; overflow: hidden; }
 			.controls { position: absolute; left: 10px; top: 10px; }
@@ -13,7 +12,6 @@
 		</style>
 
 		<script src="models/keycaps.json"></script>
-
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/87/three.min.js"></script>
 		<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
 		<script src="https://sole.github.io/tween.js/build/tween.min.js"></script>
@@ -36,463 +34,462 @@
 		<script src="layouts/Atreus.json"></script>
 		<script src="layouts/Ergodox.json"></script>
 		<script src="layouts/Mitosis-MJT.json"></script>
+	</head>
+	<script>
+		var container, stats;
+		var camera, cameraTarget, scene, renderer;
+		var mouse = { x:0, y:0, pressed: false, moved: false, clicks: 0 }
+		var selected;
+		var hover;
+		var selectTimer = null;
+		var clickTimer = null;
+		var loadedKeycaps = 0;
+		var totalKeycaps = 0;
+		var sceneBounds = null;
 
+		function pickObject() {
+			var vector = new THREE.Vector3(mouse.x, mouse.y, 1);
+			vector.unproject(camera);
+			var ray = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
+			var intersects = ray.intersectObjects(scene.getObjectByName('layouts').children);
+			for (var i=0; i<intersects.length; i++) {
+				var obj = intersects[i].object;
+
+				if (obj.name!='bounds') return obj;
+			}
+			return null;
+		}
+
+		function selectObject(obj, select) {
+			if (!obj) return;
+			obj.selected = true;
+			if (obj && obj.helper && show_helpers) obj.helper.visible = select;
+		}
+
+		document.addEventListener('mousedown', function(event) {
+			mouse.xc = mouse.x;
+			mouse.yc = mouse.y;
+			mouse.pressed = true;
+			mouse.moved = false;
+			mouse.clicks++;
+			clickTimer = setTimeout(function() { mouse.clicks = 0; }, 300);
+		}, false);
+
+		document.addEventListener('mouseup', function(event) {
+			clearTimeout(selectTimer);
+			mouse.pressed = false;
+			if (mouse.clicks) {
+				var obj = pickObject();
+				if (obj) {
+					if (selected!=obj) {
+						selected = obj;
+						zoomIn(obj);
+					} else {
+						selected = null;
+						zoomOut();
+					}
+				} else zoomOut();
+			}
+		}, false);
+
+		document.addEventListener('mousemove', function(event) {
+			clearTimeout(selectTimer);
+			mouse.moved = true;
+			mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+			mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+			if (!mouse.pressed) {
+				var obj = pickObject();
+				if (obj) {
+					if (hover && obj!=hover) selectObject(hover, false);
+					selectObject(obj, true);
+					hover = obj;
+				} else {
+					selectObject(hover, false);
+				}
+			}
+
+		}, false);
+
+
+		function moveAndLookAt(camera, dstpos, dstlookat) {
+			var origpos = new THREE.Vector3().copy(camera.position);
+			var origrot = new THREE.Euler().copy(camera.rotation);
+
+			camera.position.set(dstpos.x, dstpos.y, dstpos.z);
+			camera.lookAt(dstlookat);
+			var dstrot = new THREE.Euler().copy(camera.rotation);
+
+			camera.position.set(origpos.x, origpos.y, origpos.z);
+			camera.rotation.set(origrot.x, origrot.y, origrot.z);
+
+			var dest = new THREE.Quaternion().setFromEuler(dstrot);
+			var o = {t: 0};
+
+			new TWEEN.Tween(o).to({t: 1}, 500).onUpdate(function () {
+				camera.position.lerpVectors(origpos, dstpos, o.t);
+				camera.quaternion.slerp(dest, o.t);
+			}).easing(TWEEN.Easing.Cubic.InOut).start();
+		}
+
+		function zoomIn(obj, dist) {
+			dist = dist || 75;
+			var layouts = scene.getObjectByName('layouts');
+			var center = new THREE.Vector3();
+			center.setFromMatrixPosition( obj.matrixWorld );
+			controls.target.copy(center);
+			var newpos = new THREE.Vector3(center.x, center.y+dist, center.z+0.01);
+			moveAndLookAt(camera, newpos, center)
+		}
+
+		function zoomOut() {
+			if (!sceneBounds) return;
+			var bounds = sceneBounds;
+			var size = bounds.getSize();
+			var center = bounds.getCenter();
+
+			controls.target.copy(center);
+
+			var sw = window.innerWidth;
+			var sh = window.innerHeight;
+			var w = size.x;
+			var h = size.z;
+
+			var hdist = h*2;
+			var wdist = w*sh/sw*2;
+
+			var dw = Math.abs(sw-w);
+			var dh = Math.abs(sh-h);
+			var dk = sw/w;
+
+			var dist = h*dk < sh ? wdist : hdist*1.3;
+
+			var newpos = new THREE.Vector3(center.x, center.y + dist*1.05, center.z+0.01);
+			moveAndLookAt(camera, newpos, center)
+		}
+
+		function initScene() {
+			scene = new THREE.ObjectLoader().parse(data);
+			camera = scene.getObjectByName("Camera");
+			onWindowResize();
+			pointLight = new THREE.PointLight( 0xffffff );
+			pointLight.position.set(1,1,2);
+			camera.add(pointLight);
+
+			var keycaps = scene.getObjectByName('keycaps');
+			keycaps.visible = false;
+			keycaps.rotation.set(-Math.PI/2, 0,-Math.PI*2);
+			keycaps.traverse( function(obj) {
+				if ( obj instanceof THREE.Mesh ) {
+					obj.rotation.set(0,0,0);
+					obj.geometry.scale(-1,-1,1);
+				}
+			});
+
+			if (!scene.getObjectByName('layouts')) {
+				var layouts = new THREE.Group();
+				layouts.name = 'layouts';
+				scene.add(layouts);
+				layouts.rotation.set(-Math.PI/2, 0,-Math.PI*2);
+			}
+
+			controls = new THREE.OrbitControls( camera, container );
+			scene.background = new THREE.Color( 0xdddddd );
+			camera.position.set(0,10000,0);
+		}
+
+
+		function init() {
+			document.getElementById('files').addEventListener('change', function(evt){
+				for (var i = 0, f; f = evt.target.files[i]; i++) {
+					try {
+						var file = evt.target.files[i];
+						var start = 0;
+						var stop = file.size - 1;
+						var reader = new FileReader();
+						reader.onloadend = function(evt) {
+							if (evt.target.readyState == FileReader.DONE) {
+								var json = evt.target.result;
+								deserialize(JSON.parse(json));
+							}
+						};
+						var blob = file.slice(start, stop + 1);
+						reader.readAsBinaryString(blob);
+					} catch (err) {
+						console.log(err.message);
+					}
+				}
+			});
+
+			var ctrl = document.getElementById('preset');
+
+			ctrl.addEventListener('change', function(evt) {
+				var setName = this[this.selectedIndex].value;
+				location.hash = setName;
+				deserialize(sets[setName]);
+			}, false);
+
+			Object.keys(sets).forEach(function(key) {
+				var option = document.createElement('option');
+				option.text = key;
+				option.value = key;
+				ctrl.add(option);
+			});
+
+			var setName = location.hash ? location.hash.slice(1) : Object.keys(sets)[0];
+
+			var e = ctrl.getElementsByTagName('option');
+			for (var i=0; i<e.length; i++) {
+				e[i].selected = (setName === e[i].value);
+			}
+			setName = ctrl[ctrl.selectedIndex].value;
+
+			container = document.createElement( 'div' );
+			document.body.appendChild( container );
+			renderer = new THREE.WebGLRenderer( { antialias: antialias } );
+			renderer.setPixelRatio( window.devicePixelRatio );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			container.appendChild( renderer.domElement );
+			window.addEventListener( 'resize', onWindowResize, false );
+
+			deserialize(sets[setName]);
+		}
+
+		function onWindowResize() {
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+			renderer.setSize( window.innerWidth, window.innerHeight );
+		}
+
+		function render_html_to_canvas(html, ctx, x, y, w, h, cb, canvas, obj) {
+			var doc = document.implementation.createHTMLDocument('');
+			doc.body.innerHTML = html;
+			doc.documentElement.setAttribute('xmlns', doc.documentElement.namespaceURI);
+			var xml = (new XMLSerializer).serializeToString(doc.body);
+			var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">' +
+				'<foreignObject width="100%" height="100%">'+xml+'</foreignObject></svg>';
+			var url = 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+			var img = new Image();
+			img.onload = function() { ctx.drawImage(img, x, y); cb(canvas, obj); }
+			img.src = url;
+		}
+
+		function makeTexture(w, h, color, textColor, text, fontSize, obj, cb) {
+			fontSize = fontSize*fontSize+60;
+
+			var canvas = document.createElement( 'canvas' );
+			canvas.width = w;
+			canvas.height = h;
+			var ctx = canvas.getContext( '2d' );
+
+			ctx.fillStyle = color;
+			ctx.fillRect(0, 0, w, h);
+
+			var render_html = true;
+			if (render_html) {
+				var html = '<div style="display: table-cell; text-align: center; vertical-align: middle;'
+				//+'border: 1px solid white;'
+				+'color: '+textColor+'; background: '+ color
+				+';font: '+fontSize+'px Sans-Serif'
+				+';width: 256px; height: 240px;">'+
+				''+text.replace('\n','<br/>')+'</div>';
+				render_html_to_canvas(html, ctx, 0, 0, w, h, cb, canvas, obj);
+				return;
+			}
+
+			var tx = canvas.width / 2;
+			var ty = canvas.height / 2 + fontSize / 3;
+			ctx.font = ''+fontSize+'px Arial';
+			ctx.textAlign = 'center';
+			ctx.fillStyle = textColor;
+			ctx.fillText(text, tx, ty);
+
+			cb(canvas, obj);
+		}
+
+		function profile_row(profile, row, rows) {
+			if (profile=='SA') return 3;
+			if (rows==6) return [1,1,2,3,4,4][row];
+			else if (rows==5) return [1,2,3,4,4][row];
+			return row>3 ? 4 : Math.floor(row+1);
+		}
+
+		function getXY(x,y,w,h) {
+			s = 19.05; // 3/4 inch, precisely 19.05 mm
+			var ox = (x+w/2)*s;
+			var oy = -(y+h/2)*s;
+			return {x:ox, y:oy};
+		}
+
+		function add_keycap(x, y, prop, caption, row, rows, rx, ry) {
+			var keycaps = scene.getObjectByName('keycaps');
+			var layout = scene.getObjectByName('layouts');
+			var profile = 'DCS';
+			var w = prop.w, h = prop.h;
+			var space = w>=6.25;
+			var flip = false;
+			rs = '';
+
+			['DCS','DSA','SA','G20'].forEach(function(s) {if (prop.p.startsWith(s)) profile = s; });
+			['R1','R2','R3','R4'].forEach( function(s) { if (prop.p.includes(' '+s)) rs = s; });
+
+			if (profile=='DSA' && rs=='SPACE') profile='DCS';
+			if (profile=='SA' && rs=='') rs='R3';
+			if (profile=='DSA' && prop.w>1) profile='DCS';
+			if (profile == 'DSA') rs='R3';
+
+			//if (profile=='SA' && rs=='R3') rs='R3.001';
+			//if (profile=='DSA' && rs=='R3') rs='R3.001';
+
+			var r = profile_row(profile, row, rows);
+
+			if (rs=='') rs = 'R' + r;
+
+			if (profile=='SA' && rs=='R3') {
+				if (w==1.5) rs='R2';
+				if (w==1.25) rs='R4';
+				if (w==2) rs='R1';
+			}
+
+			if (profile=='DCS' && rs=='R4') {
+				if (w==2) rs='R1';
+			}
+
+			if (h==2) { profile='DCS'; rs='PLUS'; }
+
+			if (rs!='R2' && w==1.5) rs='R2';
+
+			var id = rs + ( w>1 ? ' '+w : '');
+
+			if (w==1 && h==1.5) { flip=true; id = 'R2 1.5'; }
+
+			var name = space ? (profile+' SPACE' ) : (profile + ' ' + id);
+
+			var obj = keycaps.getObjectByName(name);
+			obj = obj ? obj.clone() : keycaps.getObjectByName(profile+' R1').clone();
+
+			var o = getXY(x, y, w, h);
+
+			if (prop.r!=0) {
+				c = getXY(rx, ry, 0, 0);
+				var az = -prop.r * Math.PI / 180.0;
+				obj.position.set(o.x, o.y, 0);
+
+				var m0 = new THREE.Matrix4();
+				var m1 = new THREE.Matrix4();
+				var m2 = new THREE.Matrix4();
+				var m3 = new THREE.Matrix4();
+				var m4 = new THREE.Matrix4();
+
+				m0.makeTranslation(c.x, c.y, 0);
+				m1.makeRotationZ(az);
+				m2.makeTranslation(-c.x, -c.y, 0);
+				m3.makeTranslation(o.x, o.y, 0);
+
+				m4.makeRotationZ(flip ? (prop.r>0 ? 1: -1 ) * Math.PI/2 : 0);
+
+				obj.matrix = m0.multiply(m1).multiply(m2).multiply(m3).multiply(m4);
+
+				obj.matrixAutoUpdate = false;
+			} else {
+				obj.position.set(o.x, o.y, 0);
+				if (flip)
+					obj.rotation.set(0,0,Math.PI/2);
+			}
+
+			obj.angle = prop.r;
+
+			makeTexture(256, 256, prop.c, prop.t, caption, prop.f, obj, function(canvas, obj) {
+				obj.material = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x101010, wireframe: false } )
+				obj.material.map = new THREE.Texture(canvas);
+				obj.material.map.needsUpdate = true;
+				//if (obj.angle>0) obj.material.color.setHex(0xaaffaa);
+				//if (obj.angle<0) obj.material.color.setHex(0xaaaaff);
+
+				obj.helper = new THREE.BoxHelper( obj );
+				obj.helper.visible = false;
+				obj.helper.name = 'bounds';
+
+				layout.add(obj.helper);
+
+				layout.add(obj);
+
+				loadedKeycaps++;
+
+			});
+		}
+
+		function deserialize(data) {
+			initScene();
+			var x = 0;
+			var y = 0;
+			var prop = {c:0,t:0,p:'',rx:0,ry:0,r:0,a:0,f:0,x:0,y:0,sm:'',w:1,h:1,c:'#ffffff',t:'#000000'};
+			var rows = 0;
+			var row = 0;
+			var rx = 0,ry = 0;
+			totalKeycaps = 0;
+			loadedKeycaps = 0;
+			data.forEach(function(o) {if (Array.isArray(o)) rows++; });
+			data.forEach(function(o) {
+				if (Array.isArray(o)) {
+					o.forEach(function(e) {
+						if (typeof e == 'string') {
+							add_keycap(x,y,prop,e,row,rows, rx, ry);
+							totalKeycaps++;
+							x += prop.w;
+							prop.w = prop.h = 1;
+						} else {
+							Object.keys(e).forEach(function(key) { prop[key] = e[key]; });
+							if (prop.rx) rx = prop.rx;
+							if (prop.ry) ry = prop.ry;
+							if (prop.rx || prop.ry) y = ry;
+							if (prop.rx) x = prop.rx;
+							prop.rx = prop.ry = undefined;
+							x += prop.x;
+							y += prop.y;
+							prop.x = prop.y = 0;
+						}
+					});
+					x = rx;
+					y++;
+					row++;
+				}
+			});
+		}
+
+		function animate() {
+
+			requestAnimationFrame( animate );
+			TWEEN.update();
+			render();
+
+			if (loadedKeycaps>0 && loadedKeycaps==totalKeycaps) {
+				loadedKeycaps = 0;
+				var layouts = scene.getObjectByName('layouts');
+				var helper = new THREE.BoxHelper(layouts);
+				helper.name = 'bounds';
+				helper.visible = show_helpers;
+				scene.add(helper);
+				sceneBounds = new THREE.Box3().setFromObject(layouts);
+				zoomOut();
+			}
+		}
+
+		function render() {
+			renderer.render( scene, camera );
+		}
+
+		window.onload = function() {
+			init();
+			animate();
+		};
+	</script>
+	<body>
 		<div class="controls">
 			<input type="file" id="files" name="files[]" multiple="multiple" accept=".json" style="display:none"/>
 			<input type="button" value="Browse..." onclick="document.getElementById('files').click();" />
 			<select id="preset"></select>
 		</div>
-
 		<div class="info"><a href="https://github.com/joric/keycaps">github</a></div>
-
-		<script>
-			var container, stats;
-			var camera, cameraTarget, scene, renderer;
-			var mouse = { x:0, y:0, pressed: false, moved: false, clicks: 0 }
-			var selected;
-			var hover;
-			var selectTimer = null;
-			var clickTimer = null;
-			var loadedKeycaps = 0;
-			var totalKeycaps = 0;
-			var sceneBounds = null;
-
-			function pickObject() {
-				var vector = new THREE.Vector3(mouse.x, mouse.y, 1);
-				vector.unproject(camera);
-				var ray = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
-				var intersects = ray.intersectObjects(scene.getObjectByName('layouts').children);
-				for (var i=0; i<intersects.length; i++) {
-					var obj = intersects[i].object;
-
-					if (obj.name!='bounds') return obj;
-				}
-				return null;
-			}
-
-			function selectObject(obj, select) {
-				if (!obj) return;
-				obj.selected = true;
-				if (obj && obj.helper && show_helpers) obj.helper.visible = select;
-			}
-
-			document.addEventListener('mousedown', function(event) {
-				mouse.xc = mouse.x;
-				mouse.yc = mouse.y;
-				mouse.pressed = true;
-				mouse.moved = false;
-				mouse.clicks++;
-				clickTimer = setTimeout(function() { mouse.clicks = 0; }, 300);
-			}, false);
-
-			document.addEventListener('mouseup', function(event) {
-				clearTimeout(selectTimer);
-				mouse.pressed = false;
-				if (mouse.clicks) {
-					var obj = pickObject();
-					if (obj) {
-						if (selected!=obj) {
-							selected = obj;
-							zoomIn(obj);
-						} else {
-							selected = null;
-							zoomOut();
-						}
-					} else zoomOut();
-				}
-			}, false);
-
-			document.addEventListener('mousemove', function(event) {
-				clearTimeout(selectTimer);
-				mouse.moved = true;
-				mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-				mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-				if (!mouse.pressed) {
-					var obj = pickObject();
-					if (obj) {
-						if (hover && obj!=hover) selectObject(hover, false);
-						selectObject(obj, true);
-						hover = obj;
-					} else {
-						selectObject(hover, false);
-					}
-				}
-
-			}, false);
-
-
-			function moveAndLookAt(camera, dstpos, dstlookat) {
-				var origpos = new THREE.Vector3().copy(camera.position);
-				var origrot = new THREE.Euler().copy(camera.rotation);
-
-				camera.position.set(dstpos.x, dstpos.y, dstpos.z);
-				camera.lookAt(dstlookat);
-				var dstrot = new THREE.Euler().copy(camera.rotation);
-
-				camera.position.set(origpos.x, origpos.y, origpos.z);
-				camera.rotation.set(origrot.x, origrot.y, origrot.z);
-
-				var dest = new THREE.Quaternion().setFromEuler(dstrot);
-				var o = {t: 0};
-
-				new TWEEN.Tween(o).to({t: 1}, 500).onUpdate(function () {
-					camera.position.lerpVectors(origpos, dstpos, o.t);
-					camera.quaternion.slerp(dest, o.t);
-				}).easing(TWEEN.Easing.Cubic.InOut).start();
-			}
-
-			function zoomIn(obj, dist) {
-				dist = dist || 75;
-				var layouts = scene.getObjectByName('layouts');
-				var center = new THREE.Vector3();
-				center.setFromMatrixPosition( obj.matrixWorld );
-				controls.target.copy(center);
-				var newpos = new THREE.Vector3(center.x, center.y+dist, center.z+0.01);
-				moveAndLookAt(camera, newpos, center)
-			}
-
-			function zoomOut() {
-				if (!sceneBounds) return;
-				var bounds = sceneBounds;
-				var size = bounds.getSize();
-				var center = bounds.getCenter();
-
-				controls.target.copy(center);
-
-				var sw = window.innerWidth;
-				var sh = window.innerHeight;
-				var w = size.x;
-				var h = size.z;
-
-				var hdist = h*2;
-				var wdist = w*sh/sw*2;
-
-				var dw = Math.abs(sw-w);
-				var dh = Math.abs(sh-h);
-				var dk = sw/w;
-
-				var dist = h*dk < sh ? wdist : hdist*1.3;
-
-				var newpos = new THREE.Vector3(center.x, center.y + dist*1.05, center.z+0.01);
-				moveAndLookAt(camera, newpos, center)
-			}
-
-			init();
-			animate();
-
-			function initScene() {
-				scene = new THREE.ObjectLoader().parse(data);
-				camera = scene.getObjectByName("Camera");
-				onWindowResize();
-				pointLight = new THREE.PointLight( 0xffffff );
-				pointLight.position.set(1,1,2);
-				camera.add(pointLight);
-
-				var keycaps = scene.getObjectByName('keycaps');
-				keycaps.visible = false;
-				keycaps.rotation.set(-Math.PI/2, 0,-Math.PI*2);
-				keycaps.traverse( function(obj) {
-					if ( obj instanceof THREE.Mesh ) {
-						obj.rotation.set(0,0,0);
-						obj.geometry.scale(-1,-1,1);
-					}
-				});
-
-				if (!scene.getObjectByName('layouts')) {
-					var layouts = new THREE.Group();
-					layouts.name = 'layouts';
-					scene.add(layouts);
-					layouts.rotation.set(-Math.PI/2, 0,-Math.PI*2);
-				}
-
-				controls = new THREE.OrbitControls( camera, container );
-				scene.background = new THREE.Color( 0xdddddd );
-				camera.position.set(0,10000,0);
-			}
-
-
-			function init() {
-				document.getElementById('files').addEventListener('change', function(evt){
-					for (var i = 0, f; f = evt.target.files[i]; i++) {
-						try {
-							var file = evt.target.files[i];
-							var start = 0;
-							var stop = file.size - 1;
-							var reader = new FileReader();
-							reader.onloadend = function(evt) {
-								if (evt.target.readyState == FileReader.DONE) {
-									var json = evt.target.result;
-									deserialize(JSON.parse(json));
-								}
-							};
-							var blob = file.slice(start, stop + 1);
-							reader.readAsBinaryString(blob);
-						} catch (err) {
-							console.log(err.message);
-						}
-					}
-				});
-
-				var ctrl = document.getElementById('preset');
-
-				ctrl.addEventListener('change', function(evt) {
-					var setName = this[this.selectedIndex].value;
-					location.hash = setName;
-					deserialize(sets[setName]);
-				}, false);
-
-				Object.keys(sets).forEach(function(key) {
-					var option = document.createElement('option');
-					option.text = key;
-					option.value = key;
-					ctrl.add(option);
-				});
-
-				var setName = location.hash ? location.hash.slice(1) : Object.keys(sets)[0];
-
-				var e = ctrl.getElementsByTagName('option');
-				for (var i=0; i<e.length; i++) {
-					e[i].selected = (setName === e[i].value);
-				}
-				setName = ctrl[ctrl.selectedIndex].value;
-
-				container = document.createElement( 'div' );
-				document.body.appendChild( container );
-				renderer = new THREE.WebGLRenderer( { antialias: antialias } );
-				renderer.setPixelRatio( window.devicePixelRatio );
-				renderer.setSize( window.innerWidth, window.innerHeight );
-				container.appendChild( renderer.domElement );
-				window.addEventListener( 'resize', onWindowResize, false );
-
-				deserialize(sets[setName]);
-			}
-
-			function onWindowResize() {
-				camera.aspect = window.innerWidth / window.innerHeight;
-				camera.updateProjectionMatrix();
-				renderer.setSize( window.innerWidth, window.innerHeight );
-			}
-
-			function render_html_to_canvas(html, ctx, x, y, w, h, cb, canvas, obj) {
-				var doc = document.implementation.createHTMLDocument('');
-				doc.body.innerHTML = html;
-				doc.documentElement.setAttribute('xmlns', doc.documentElement.namespaceURI);
-				var xml = (new XMLSerializer).serializeToString(doc.body);
-				var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">' +
-					'<foreignObject width="100%" height="100%">'+xml+'</foreignObject></svg>';
-//console.log(svg);
-				var url = 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
-				var img = new Image();
-				img.onload = function() { ctx.drawImage(img, x, y); cb(canvas, obj); }
-				img.src = url;
-			}
-
-			function makeTexture(w, h, color, textColor, text, fontSize, obj, cb) {
-				fontSize = fontSize*fontSize+60;
-
-				var canvas = document.createElement( 'canvas' );
-				canvas.width = w;
-				canvas.height = h;
-				var ctx = canvas.getContext( '2d' );
-
-				ctx.fillStyle = color;
-				ctx.fillRect(0, 0, w, h);
-
-				var render_html = true;
-				if (render_html) {
-					var html = '<div style="display: table-cell; text-align: center; vertical-align: middle;'
-					//+'border: 1px solid white;'
-					+'color: '+textColor+'; background: '+ color
-					+';font: '+fontSize+'px Sans-Serif'
-					+';width: 256px; height: 240px;">'+
-					''+text.replace('\n','<br/>')+'</div>';
-					render_html_to_canvas(html, ctx, 0, 0, w, h, cb, canvas, obj);
-					return;
-				}
-
-				var tx = canvas.width / 2;
-				var ty = canvas.height / 2 + fontSize / 3;
-				ctx.font = ''+fontSize+'px Arial';
-				ctx.textAlign = 'center';
-				ctx.fillStyle = textColor;
-				ctx.fillText(text, tx, ty);
-
-				cb(canvas, obj);
-			}
-
-			function profile_row(profile, row, rows) {
-				if (profile=='SA') return 3;
-				if (rows==6) return [1,1,2,3,4,4][row];
-				else if (rows==5) return [1,2,3,4,4][row];
-				return row>3 ? 4 : Math.floor(row+1);
-			}
-
-			function getXY(x,y,w,h) {
-				s = 19.05; // 3/4 inch, precisely 19.05 mm
-				var ox = (x+w/2)*s;
-				var oy = -(y+h/2)*s;
-				return {x:ox, y:oy};
-			}
-
-			function add_keycap(x, y, prop, caption, row, rows, rx, ry) {
-				var keycaps = scene.getObjectByName('keycaps');
-				var layout = scene.getObjectByName('layouts');
-				var profile = 'DCS';
-				var w = prop.w, h = prop.h;
-				var space = w>=6.25;
-				var flip = false;
-				rs = '';
-
-				['DCS','DSA','SA','G20'].forEach(function(s) {if (prop.p.startsWith(s)) profile = s; });
-				['R1','R2','R3','R4'].forEach( function(s) { if (prop.p.includes(' '+s)) rs = s; });
-
-				if (profile=='DSA' && rs=='SPACE') profile='DCS';
-				if (profile=='SA' && rs=='') rs='R3';
-				if (profile=='DSA' && prop.w>1) profile='DCS';
-				if (profile == 'DSA') rs='R3';
-
-				//if (profile=='SA' && rs=='R3') rs='R3.001';
-				//if (profile=='DSA' && rs=='R3') rs='R3.001';
-
-				var r = profile_row(profile, row, rows);
-
-				if (rs=='') rs = 'R' + r;
-
-				if (profile=='SA' && rs=='R3') {
-					if (w==1.5) rs='R2';
-					if (w==1.25) rs='R4';
-					if (w==2) rs='R1';
-				}
-
-				if (profile=='DCS' && rs=='R4') {
-					if (w==2) rs='R1';
-				}
-
-				if (h==2) { profile='DCS'; rs='PLUS'; }
-
-				if (rs!='R2' && w==1.5) rs='R2';
-
-				var id = rs + ( w>1 ? ' '+w : '');
-
-				if (w==1 && h==1.5) { flip=true; id = 'R2 1.5'; }
-
-				var name = space ? (profile+' SPACE' ) : (profile + ' ' + id);
-
-				var obj = keycaps.getObjectByName(name);
-				obj = obj ? obj.clone() : keycaps.getObjectByName(profile+' R1').clone();
-
-				var o = getXY(x, y, w, h);
-
-				if (prop.r!=0) {
-					c = getXY(rx, ry, 0, 0);
-					var az = -prop.r * Math.PI / 180.0;
-					obj.position.set(o.x, o.y, 0);
-
-					var m0 = new THREE.Matrix4();
-					var m1 = new THREE.Matrix4();
-					var m2 = new THREE.Matrix4();
-					var m3 = new THREE.Matrix4();
-					var m4 = new THREE.Matrix4();
-
-					m0.makeTranslation(c.x, c.y, 0);
-					m1.makeRotationZ(az);
-					m2.makeTranslation(-c.x, -c.y, 0);
-					m3.makeTranslation(o.x, o.y, 0);
-
-					m4.makeRotationZ(flip ? (prop.r>0 ? 1: -1 ) * Math.PI/2 : 0);
-
-					obj.matrix = m0.multiply(m1).multiply(m2).multiply(m3).multiply(m4);
-
-					obj.matrixAutoUpdate = false;
-				} else {
-					obj.position.set(o.x, o.y, 0);
-					if (flip)
-						obj.rotation.set(0,0,Math.PI/2);
-				}
-
-				obj.angle = prop.r;
-
-				makeTexture(256, 256, prop.c, prop.t, caption, prop.f, obj, function(canvas, obj) {
-					obj.material = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x101010, wireframe: false } )
-					obj.material.map = new THREE.Texture(canvas);
-					obj.material.map.needsUpdate = true;
-					//if (obj.angle>0) obj.material.color.setHex(0xaaffaa);
-					//if (obj.angle<0) obj.material.color.setHex(0xaaaaff);
-
-					obj.helper = new THREE.BoxHelper( obj );
-					obj.helper.visible = false;
-					obj.helper.name = 'bounds';
-
-					layout.add(obj.helper);
-
-					layout.add(obj);
-
-					loadedKeycaps++;
-
-				});
-			}
-
-			function deserialize(data) {
-				initScene();
-				var x = 0;
-				var y = 0;
-				var prop = {c:0,t:0,p:'',rx:0,ry:0,r:0,a:0,f:0,x:0,y:0,sm:'',w:1,h:1,c:'#ffffff',t:'#000000'};
-				var rows = 0;
-				var row = 0;
-				var rx = 0,ry = 0;
-				totalKeycaps = 0;
-				loadedKeycaps = 0;
-				data.forEach(function(o) {if (Array.isArray(o)) rows++; });
-				data.forEach(function(o) {
-					if (Array.isArray(o)) {
-						o.forEach(function(e) {
-							if (typeof e == 'string') {
-								add_keycap(x,y,prop,e,row,rows, rx, ry);
-								totalKeycaps++;
-								x += prop.w;
-								prop.w = prop.h = 1;
-							} else {
-								Object.keys(e).forEach(function(key) { prop[key] = e[key]; });
-								if (prop.rx) rx = prop.rx;
-								if (prop.ry) ry = prop.ry;
-								if (prop.rx || prop.ry) y = ry;
-								if (prop.rx) x = prop.rx;
-								prop.rx = prop.ry = undefined;
-								x += prop.x;
-								y += prop.y;
-								prop.x = prop.y = 0;
-							}
-						});
-						x = rx;
-						y++;
-						row++;
-					}
-				});
-			}
-
-			function animate() {
-
-				requestAnimationFrame( animate );
-				TWEEN.update();
-				render();
-
-				if (loadedKeycaps>0 && loadedKeycaps==totalKeycaps) {
-					loadedKeycaps = 0;
-					var layouts = scene.getObjectByName('layouts');
-					var helper = new THREE.BoxHelper(layouts);
-					helper.name = 'bounds';
-					helper.visible = show_helpers;
-					scene.add(helper);
-					sceneBounds = new THREE.Box3().setFromObject(layouts);
-					zoomOut();
-				}
-			}
-
-			function render() {
-				renderer.render( scene, camera );
-			}
-
-		</script>
 	</body>
 </html>
