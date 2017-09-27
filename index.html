@@ -31,6 +31,7 @@
 		<script src="layouts/Leopold FC660m.json"></script>
 		<script src="layouts/Symbolics-364000.json"></script>
 		<script src="layouts/Atreus.json"></script>
+		<script src="layouts/Atreus-62.json"></script>
 		<script src="layouts/Ergodox.json"></script>
 		<script src="layouts/Mitosis-MJT.json"></script>
 
@@ -360,7 +361,7 @@
 
 				var id = rs + ( w>1 ? ' '+w : '');
 
-				if (w==1 && h==1.5) { flip=true; id = 'R2 1.5'; profile='DCS';}
+				if (w==1 && h==1.5) { flip=true; id = 'R2 1.5'; profile=='DSA' ? 'DCS': profile; }
 
 				var name = space ? (profile+' SPACE' ) : (profile + ' ' + id);
 
