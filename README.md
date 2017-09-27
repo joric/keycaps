@@ -30,7 +30,7 @@ MIT
 All copyrights to resource files belong to their respective owners.
 
 Last version uses an unchanged copy of [serial.js](https://github.com/ijprest/keyboard-layout-editor/blob/master/serial.js)
-to account for undocumented format features.
+to account for undocumented features.
 
 ## References
 
