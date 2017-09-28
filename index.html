@@ -415,31 +415,6 @@
 				});
 			}
 
-			function deserialize(data) {
-				initScene();
-				var prop = {c:0,t:0,p:'',r:0,a:0,f:0,x:0,y:0,sm:'',w:1,h:1,c:'#ffffff',t:'#000000'};
-				var x=0,y=0,rx=0,ry=0,ofs=Array.isArray(data[0])?0:1,rows=data.length-ofs;
-				for (row=0; row<rows; row++) {
-					data[row+ofs].forEach(function(e) {
-						if (typeof e == 'string') {
-							add_keycap(x,y,prop,e,row,rows,rx,ry);
-							x += prop.w;
-							prop.w = prop.h = 1;
-						} else {
-							Object.keys(e).forEach(function(key) { prop[key] = e[key]; });
-							if (prop.rx!=undefined) { rx = x = prop.rx; y = ry; }
-							if (prop.ry!=undefined) { ry = y = prop.ry; }
-							prop.rx = prop.ry = undefined;
-							x += prop.x;
-							y += prop.y;
-							prop.x = prop.y = 0;
-						}
-					});
-					x = rx;
-					y++;
-				}
-			}
-
 			function animate() {
 
 				requestAnimationFrame( animate );
@@ -466,6 +441,58 @@
 				init();
 				animate();
 			};
+
+			$serial2 = {};
+
+			(function () {
+				var f = {w:'width',h:'height',w2:'width2',h2:'height2',r:'rotation_angle', rx:'rotation_x',
+					ry:'rotation_y',c:'color',p:'profile',n:'nub',g:'ghost',l:'stepped',d:'decal'};
+
+				$serial2.deserialize = function(data) {
+					var meta = {}, keys = [];
+					var prop = {c:0,t:0,p:'',r:0,a:0,f:0,x:0,y:0,sm:'',w:1,h:1,c:'#ffffff',t:'#000000'};
+					var x=0,y=0,rx=0,ry=0,ofs=Array.isArray(data[0])?0:1,rows=data.length-ofs;
+					for (row=0; row<rows; row++) {
+						data[row+ofs].forEach(function(e) {
+							if (typeof e == 'string') {
+								keys.push({x:x,y:y,x2:0,y2:0,labels:[e],textColor:[],textSize:[],
+									rotation_x:rx,rotation_y:ry, default:{textColor:prop.t, textSize:prop.f}});
+								var rec = keys[keys.length-1];
+								Object.keys(f).forEach(function(key) { if (prop[key]!=undefined) rec[f[key]] = prop[key]; });
+								x += prop.w;
+								prop.w = prop.h = 1;
+							} else {
+								Object.keys(e).forEach(function(key) { prop[key] = e[key]; });
+								if (prop.rx!=undefined) { rx = x = prop.rx; y = ry; }
+								if (prop.ry!=undefined) { ry = y = prop.ry; }
+								prop.rx = prop.ry = undefined;
+								x += prop.x;
+								y += prop.y;
+								prop.x = prop.y = 0;
+							}
+						});
+						x = rx;
+						y++;
+					}
+					return {meta:meta, keys:keys};
+				}
+			}());
+
+			function deserialize(data) {
+				initScene();
+				var keyboard = $serial2.deserialize(data);
+				var rows = 0; keyboard.keys.forEach(function(k) { if (k.y!=y) rows++; y = k.y; });
+				var row = 0;
+				var y = 0;
+				keyboard.keys.forEach(function(k) {
+					//console.log(JSON.stringify(k));
+					var caption = k.labels.join('\n').replace(/\n{2+}/g, ' ').trim();
+					var prop = { r: k.rotation_angle, w:k.width, h:k.height, c:k.color, t:k.default.textColor, f:k.default.textSize, p:k.profile };
+					if (k.y!=y) row++;
+					add_keycap(k.x, k.y, prop, caption, row, rows, k.rotation_x, k.rotation_y);
+					y = k.y;
+				});
+			}
 
 		</script>
 		</head>
