@@ -425,32 +425,28 @@
 			function deserialize(data) {
 				initScene();
 				var prop = {c:0,t:0,p:'',r:0,a:0,f:0,x:0,y:0,sm:'',w:1,h:1,c:'#ffffff',t:'#000000'};
-				var x=0,y=0,rx=0,ry=0,row=0,rows=0;
+				var x=0,y=0,rx=0,ry=0,ofs=Array.isArray(data[0])?0:1,rows=data.length-ofs;
 				totalKeycaps = loadedKeycaps = 0;
-				data.forEach(function(o) {if (Array.isArray(o)) rows++; });
-				data.forEach(function(o) {
-					if (Array.isArray(o)) {
-						o.forEach(function(e) {
-							if (typeof e == 'string') {
-								add_keycap(x,y,prop,e,row,rows, rx, ry);
-								totalKeycaps++;
-								x += prop.w;
-								prop.w = prop.h = 1;
-							} else {
-								Object.keys(e).forEach(function(key) { prop[key] = e[key]; });
-								if (prop.rx!=undefined) { rx = x = prop.rx; y = ry; }
-								if (prop.ry!=undefined) { ry = y = prop.ry; }
-								prop.rx = prop.ry = undefined;
-								x += prop.x;
-								y += prop.y;
-								prop.x = prop.y = 0;
-							}
-						});
-						x = rx;
-						y++;
-						row++;
-					}
-				});
+				for (row=0; row<rows; row++) {
+					data[row+ofs].forEach(function(e) {
+						if (typeof e == 'string') {
+							add_keycap(x,y,prop,e,row,rows,rx,ry);
+							totalKeycaps++;
+							x += prop.w;
+							prop.w = prop.h = 1;
+						} else {
+							Object.keys(e).forEach(function(key) { prop[key] = e[key]; });
+							if (prop.rx!=undefined) { rx = x = prop.rx; y = ry; }
+							if (prop.ry!=undefined) { ry = y = prop.ry; }
+							prop.rx = prop.ry = undefined;
+							x += prop.x;
+							y += prop.y;
+							prop.x = prop.y = 0;
+						}
+					});
+					x = rx;
+					y++;
+				}
 			}
 
 			function animate() {
