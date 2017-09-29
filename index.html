@@ -497,7 +497,7 @@
 			}
 
 			function toggleFullScreen(c) {
-				var c = container, d = document;
+				var c = document.body, d = document;
 				if (!d.fullscreenElement && !d.mozFullScreenElement && !d.webkitFullscreenElement && !d.msFullscreenElement ) {
 					if (c.requestFullscreen) c.requestFullscreen();
 					else if (c.msRequestFullscreen) c.msRequestFullscreen();
