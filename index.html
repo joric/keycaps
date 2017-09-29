@@ -246,6 +246,8 @@
 				setName = ctrl[ctrl.selectedIndex].value;
 
 				container = document.createElement( 'div' );
+				container.ondblclick = toggleFullScreen;
+
 				document.body.appendChild( container );
 				renderer = new THREE.WebGLRenderer( { antialias: antialias } );
 				renderer.setPixelRatio( window.devicePixelRatio );
@@ -493,6 +495,26 @@
 					y = k.y;
 				});
 			}
+
+			function toggleFullScreen(c) {
+				var c = container, d = document;
+				if (!d.fullscreenElement && !d.mozFullScreenElement && !d.webkitFullscreenElement && !d.msFullscreenElement ) {
+					if (c.requestFullscreen) c.requestFullscreen();
+					else if (c.msRequestFullscreen) c.msRequestFullscreen();
+					else if (c.mozRequestFullScreen) c.mozRequestFullScreen();
+					else if (c.webkitRequestFullscreen) c.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+				} else {
+					if (document.exitFullscreen) document.exitFullscreen();
+					else if (document.msExitFullscreen) document.msExitFullscreen();
+					else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
+					else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+				}
+			}
+
+			document.onkeypress = function(e) {
+				var c = String.fromCharCode(e.charCode);
+				if (c.toLowerCase()=='f') toggleFullScreen();
+			};
 
 		</script>
 		</head>
