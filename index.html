@@ -277,37 +277,33 @@
 				img.src = url;
 			}
 
-			function makeTexture(w, h, color, textColor, text, fontSize, obj, cb) {
-				fontSize = fontSize*fontSize+60;
-
+			function makeTexture(w, h, key, obj, cb) {
 				var canvas = document.createElement( 'canvas' );
 				canvas.width = w;
 				canvas.height = h;
 				var ctx = canvas.getContext( '2d' );
-
-				ctx.fillStyle = color;
+				ctx.fillStyle = key.color;
 				ctx.fillRect(0, 0, w, h);
 
-				var render_html = true;
-				if (render_html) {
-					var html = '<div style="display: table-cell; text-align: center; vertical-align: middle;'
-					//+'border: 1px solid white;'
-					+'color: '+textColor+'; background: '+ color
-					+';font: '+fontSize+'px Sans-Serif'
-					+';width: 256px; height: 240px;">'+
-					''+text.replace('\n','<br/>')+'</div>';
-					render_html_to_canvas(html, ctx, 0, 0, w, h, cb, canvas, obj);
-					return;
+				var html = '';
+				for (var i=0; i<12; i++) {
+					var caption = key.labels[i];
+					if (caption) {
+						var textColor = key.textColor[i] ? key.textColor[i] : key.default.textColor;
+						var textSize = key.textSize[i] ? key.textSize[i] : key.default.textSize;
+						var ta = (i==0||i==3||i==6||i==9) ? 'left' : (i==1||i==4||i==7||i==10) ? 'center' : 'right';
+						var va = (i==0||i==1||i==2) ? 'top' : (i==3||i==4||i==5) ? 'middle' : 'bottom';
+						var fontSize = textSize*textSize+60;
+						var style = 'font:'+fontSize+'px Sans-Serif;';
+						style += 'text-align:'+ta+';';
+						style += 'color:'+textColor+';';
+						style += 'vertical-align:'+va+';';
+						style += 'display: table-cell; height: 240px; width: 240px;';
+						html += '<div style="position:absolute;"><div style="'+style+'">'+caption+'</div></div>';
+					}
 				}
 
-				var tx = canvas.width / 2;
-				var ty = canvas.height / 2 + fontSize / 3;
-				ctx.font = ''+fontSize+'px Arial';
-				ctx.textAlign = 'center';
-				ctx.fillStyle = textColor;
-				ctx.fillText(text, tx, ty);
-
-				cb(canvas, obj);
+				render_html_to_canvas(html, ctx, 0, 0, w, h, cb, canvas, obj);
 			}
 
 			function profile_row(profile, row, rows) {
@@ -324,21 +320,21 @@
 				return {x:ox, y:oy};
 			}
 
-			function add_keycap(x, y, prop, caption, row, rows, rx, ry) {
+			function add_keycap(key, row, rows) {
 				var keycaps = scene.getObjectByName('keycaps');
 				var layout = scene.getObjectByName('layouts');
 				var profile = 'DCS';
-				var w = prop.w, h = prop.h;
+				var w = key.width, h = key.height;
 				var space = w>=6.25;
 				var flip = false;
 				rs = '';
 
-				['DCS','DSA','SA','G20'].forEach(function(s) {if (prop.p.startsWith(s)) profile = s; });
-				['R1','R2','R3','R4'].forEach( function(s) { if (prop.p.includes(' '+s)) rs = s; });
+				['DCS','DSA','SA','G20'].forEach(function(s) {if (key.profile.startsWith(s)) profile = s; });
+				['R1','R2','R3','R4'].forEach( function(s) { if (key.profile.includes(' '+s)) rs = s; });
 
 				if (profile=='DSA' && rs=='SPACE') profile='DCS';
 				if (profile=='SA' && rs=='') rs='R3';
-				if (profile=='DSA' && prop.w>1) profile='DCS';
+				if (profile=='DSA' && w>1) profile='DCS';
 				if (profile == 'DSA') rs='R3';
 
 				//if (profile=='SA' && rs=='R3') rs='R3.001';
@@ -371,11 +367,17 @@
 				var obj = keycaps.getObjectByName(name);
 				obj = obj ? obj.clone() : keycaps.getObjectByName(profile+' R3').clone();
 
+				var x = key.x;
+				var y = key.y;
+				var rx = key.rotation_x;
+				var ry = key.rotation_y;
+				var ra = key.rotation_angle;
+
 				var o = getXY(x, y, w, h);
 
-				if (prop.r!=0) {
+				if (ra!=0) {
 					c = getXY(rx, ry, 0, 0);
-					var az = -prop.r * Math.PI / 180.0;
+					var az = -ra * Math.PI / 180.0;
 					obj.position.set(o.x, o.y, 0);
 
 					var m0 = new THREE.Matrix4();
@@ -388,8 +390,7 @@
 					m1.makeRotationZ(az);
 					m2.makeTranslation(-c.x, -c.y, 0);
 					m3.makeTranslation(o.x, o.y, 0);
-
-					m4.makeRotationZ(flip ? (prop.r>0 ? 1: -1 ) * Math.PI/2 : 0);
+					m4.makeRotationZ(flip ? (ra>0 ? 1: -1 ) * Math.PI/2 : 0);
 
 					obj.matrix = m0.multiply(m1).multiply(m2).multiply(m3).multiply(m4);
 
@@ -401,10 +402,10 @@
 						obj.rotation.set(0,0,Math.PI/2);
 				}
 
-				obj.angle = prop.r;
+				obj.angle = ra;
 				totalKeycaps++;
 
-				makeTexture(256, 256, prop.c, prop.t, caption, prop.f, obj, function(canvas, obj) {
+				makeTexture(256, 256, key, obj, function(canvas, obj) {
 					obj.material = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x101010, wireframe: false } )
 					obj.material.map = new THREE.Texture(canvas);
 					obj.material.map.needsUpdate = true;
@@ -444,58 +445,6 @@
 				animate();
 			};
 
-			$serial2 = {};
-
-			(function () {
-				var f = {w:'width',h:'height',w2:'width2',h2:'height2',r:'rotation_angle', rx:'rotation_x',
-					ry:'rotation_y',c:'color',p:'profile',n:'nub',g:'ghost',l:'stepped',d:'decal'};
-
-				$serial2.deserialize = function(data) {
-					var meta = {}, keys = [];
-					var prop = {c:0,t:0,p:'',r:0,a:0,f:0,x:0,y:0,sm:'',w:1,h:1,c:'#ffffff',t:'#000000'};
-					var x=0,y=0,rx=0,ry=0,ofs=Array.isArray(data[0])?0:1,rows=data.length-ofs;
-					for (row=0; row<rows; row++) {
-						data[row+ofs].forEach(function(e) {
-							if (typeof e == 'string') {
-								keys.push({x:x,y:y,x2:0,y2:0,labels:[e],textColor:[],textSize:[],
-									rotation_x:rx,rotation_y:ry, default:{textColor:prop.t, textSize:prop.f}});
-								var rec = keys[keys.length-1];
-								Object.keys(f).forEach(function(key) { if (prop[key]!=undefined) rec[f[key]] = prop[key]; });
-								x += prop.w;
-								prop.w = prop.h = 1;
-							} else {
-								Object.keys(e).forEach(function(key) { prop[key] = e[key]; });
-								if (prop.rx!=undefined) { rx = x = prop.rx; y = ry; }
-								if (prop.ry!=undefined) { ry = y = prop.ry; }
-								prop.rx = prop.ry = undefined;
-								x += prop.x;
-								y += prop.y;
-								prop.x = prop.y = 0;
-							}
-						});
-						x = rx;
-						y++;
-					}
-					return {meta:meta, keys:keys};
-				}
-			}());
-
-			function deserialize(data) {
-				initScene();
-				var keyboard = $serial2.deserialize(data);
-				var rows = 0; keyboard.keys.forEach(function(k) { if (k.y!=y) rows++; y = k.y; });
-				var row = 0;
-				var y = 0;
-				keyboard.keys.forEach(function(k) {
-					//console.log(JSON.stringify(k));
-					var caption = k.labels.join('\n').replace(/\n{2+}/g, ' ').trim();
-					var prop = { r: k.rotation_angle, w:k.width, h:k.height, c:k.color, t:k.default.textColor, f:k.default.textSize, p:k.profile };
-					if (k.y!=y) row++;
-					add_keycap(k.x, k.y, prop, caption, row, rows, k.rotation_x, k.rotation_y);
-					y = k.y;
-				});
-			}
-
 			function toggleFullScreen(c) {
 				var c = document.body, d = document;
 				if (!d.fullscreenElement && !d.mozFullScreenElement && !d.webkitFullscreenElement && !d.msFullscreenElement ) {
@@ -515,6 +464,70 @@
 				var c = String.fromCharCode(e.charCode);
 				if (c.toLowerCase()=='f') toggleFullScreen();
 			};
+
+			$serial2 = {};
+
+			(function () {
+				var kf = {w:'width',h:'height',w2:'width2',h2:'height2',r:'rotation_angle', rx:'rotation_x',
+					ry:'rotation_y',c:'color',p:'profile',n:'nub',g:'ghost',l:'stepped',d:'decal'};
+
+				var kl = [
+					[ 0, 6, 2, 8, 9,11, 3, 5, 1, 4, 7,10], [ 1, 7,-1,-1, 9,11, 4,-1,-1,-1,-1,10],
+					[ 3,-1, 5,-1, 9,11,-1,-1, 4,-1,-1,10], [ 4,-1,-1,-1, 9,11,-1,-1,-1,-1,-1,10],
+					[ 0, 6, 2, 8,10,-1, 3, 5, 1, 4, 7,-1], [ 1, 7,-1,-1,10,-1, 4,-1,-1,-1,-1,-1],
+					[ 3,-1, 5,-1,10,-1,-1,-1, 4,-1,-1,-1], [ 4,-1,-1,-1,10,-1,-1,-1,-1,-1,-1,-1],
+				];
+
+				function unp(data, align) {
+					var v = typeof data==='string' ? data.split('\n') : (data ? data : []);
+					var out = new Array(12);
+					for(var i=0; i<v.length; i++) out[kl[align][i]] = v[i];
+					return out;
+				}
+
+				$serial2.deserialize = function(data) {
+					var meta = {}, keys = [];
+					var p = {c:0,t:0,p:'',r:0,a:0,f:0,fa:[],x:0,y:0,sm:'',w:1,h:1,c:'#ffffff',t:'#000000'};
+					var x=0,y=0,rx=0,ry=0,ofs=Array.isArray(data[0])?0:1,rows=data.length-ofs;
+					for (row=0; row<rows; row++) {
+						data[row+ofs].forEach(function(e) {
+							if (typeof e == 'string') {
+								var key = {x:x,y:y,x2:0,y2:0,rotation_x:rx,rotation_y:ry,
+									labels:unp(e,p.a),textColor:unp(p.t,p.a),textSize:unp(p.fa,p.a),
+									default:{textColor:p.t, textSize:p.f}};
+								Object.keys(kf).forEach(function(f) { if (p[f]!=undefined) key[kf[f]] = p[f]; });
+								keys.push(key);
+								x += p.w;
+								p.w = p.h = 1;
+							} else {
+								Object.keys(e).forEach(function(key) { p[key] = e[key]; });
+								if (p.rx!=undefined) { rx = x = p.rx; y = ry; }
+								if (p.ry!=undefined) { ry = y = p.ry; }
+								p.rx = p.ry = undefined;
+								x += p.x;
+								y += p.y;
+								p.x = p.y = p.n = p.l = 0;
+							}
+						});
+						x = rx;
+						y++;
+					}
+					return {meta:meta, keys:keys};
+				}
+			}());
+
+			function deserialize(data) {
+				initScene();
+				var keyboard = $serial2.deserialize(data);
+				var rows = 0; keyboard.keys.forEach(function(k) { if (k.y!=y) rows++; y = k.y; });
+				var row = 0;
+				var y = 0;
+				keyboard.keys.forEach(function(k) {
+					if (k.y!=y) row++;
+					add_keycap(k, row, rows);
+					y = k.y;
+				});
+			}
 
 		</script>
 		</head>
