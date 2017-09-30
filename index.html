@@ -293,7 +293,7 @@
 						var textSize = key.textSize[i] ? key.textSize[i] : key.default.textSize;
 						var ta = (i==0||i==3||i==6||i==9) ? 'left' : (i==1||i==4||i==7||i==10) ? 'center' : 'right';
 						var va = (i==0||i==1||i==2) ? 'top' : (i==3||i==4||i==5) ? 'middle' : 'bottom';
-						var fontSize = textSize*textSize+60;
+						var fontSize = 50+textSize*12;
 						var style = 'font:'+fontSize+'px Sans-Serif;';
 						style += 'text-align:'+ta+';';
 						style += 'color:'+textColor+';';
@@ -487,7 +487,7 @@
 
 				$serial2.deserialize = function(data) {
 					var meta = {}, keys = [];
-					var p = {c:0,t:0,p:'',r:0,a:0,f:0,fa:[],x:0,y:0,sm:'',w:1,h:1,c:'#ffffff',t:'#000000'};
+					var p = {c:0,t:0,p:'',r:0,a:0,f:3,fa:[],x:0,y:0,sm:'',w:1,h:1,c:'#ffffff',t:'#000000'};
 					var x=0,y=0,rx=0,ry=0,ofs=Array.isArray(data[0])?0:1,rows=data.length-ofs;
 					for (row=0; row<rows; row++) {
 						data[row+ofs].forEach(function(e) {
@@ -523,6 +523,7 @@
 				var row = 0;
 				var y = 0;
 				keyboard.keys.forEach(function(k) {
+					//console.log(JSON.stringify(k));
 					if (k.y!=y) row++;
 					add_keycap(k, row, rows);
 					y = k.y;
