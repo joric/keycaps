@@ -38,7 +38,7 @@
 		<script src="layouts/Cytokinesis-G.json"></script>
 
 		<script>
-			var container, stats;
+			var container, stats, controls;
 			var camera, cameraTarget, scene, renderer;
 			var mouse = { x:0, y:0, pressed: false, moved: false, clicks: 0 }
 			var selected;
@@ -195,8 +195,12 @@
 					layouts.rotation.set(-Math.PI/2, 0,-Math.PI*2);
 				}
 
-				controls = new THREE.OrbitControls( camera, container );
 				scene.background = new THREE.Color( 0xdddddd );
+
+				controls = new THREE.OrbitControls( camera, container );
+				controls.autoRotate = false;
+				container.ondblclick = function() { controls.autoRotate = !controls.autoRotate; }
+
 				camera.position.set(0,10000,0);
 			}
 
@@ -247,7 +251,6 @@
 				setName = ctrl[ctrl.selectedIndex].value;
 
 				container = document.createElement( 'div' );
-				container.ondblclick = toggleFullScreen;
 
 				document.body.appendChild( container );
 				renderer = new THREE.WebGLRenderer( { antialias: antialias } );
@@ -469,7 +472,13 @@
 			function animate() {
 
 				requestAnimationFrame( animate );
-				TWEEN.update();
+				var t = TWEEN.update();
+
+				if (!t && controls.autoRotate) {
+					controls.autoRotateSpeed = 3.0;
+					controls.update();
+				}
+
 				render();
 
 				if (loadedKeycaps>0 && loadedKeycaps==totalKeycaps) {
@@ -511,6 +520,7 @@
 			document.onkeypress = function(e) {
 				var c = String.fromCharCode(e.charCode);
 				if (c.toLowerCase()=='f') toggleFullScreen();
+				if (c.toLowerCase()=='r') controls.autoRotate = !controls.Autorotate;
 			};
 
 			$serial2 = {};
