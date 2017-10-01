@@ -26,6 +26,7 @@
 		<script src="layouts/Keycap Profiles.json"></script>
 		<script src="layouts/Default 60.json"></script>
 		<script src="layouts/ANSI 104.json"></script>
+		<script src="layouts/Stealth Black.json"></script>
 		<script src="layouts/PMK Grab Bag (Aug 23, 2017).json"></script>
 		<script src="layouts/GB-Retro-DSA.json"></script>
 		<script src="layouts/Leopold FC660m.json"></script>
@@ -226,7 +227,7 @@
 
 				ctrl.addEventListener('change', function(evt) {
 					var setName = this[this.selectedIndex].value;
-					location.hash = setName;
+					location.hash = encodeURIComponent(setName);
 					deserialize(sets[setName]);
 				}, false);
 
@@ -237,7 +238,7 @@
 					ctrl.add(option);
 				});
 
-				var setName = location.hash ? location.hash.slice(1) : Object.keys(sets)[0];
+				var setName = location.hash ? decodeURIComponent(location.hash.slice(1)) : Object.keys(sets)[0];
 
 				var e = ctrl.getElementsByTagName('option');
 				for (var i=0; i<e.length; i++) {
@@ -321,8 +322,9 @@
 
 						var fontSize = (20+textSize*8) * (tsize/256) * (w>h ? h/w : w/h);
 
+						var style = '';
 						var size = 'width:'+cw+'px; height:'+ch+'px;';
-						var style = 'font:'+fontSize+'px Sans-Serif;';
+						var font = 'font:'+fontSize+'px Sans-Serif;';
 						//style += 'border: 1px solid black;'
 						style += 'text-align:'+ta+';';
 						style += 'color:'+textColor+';';
@@ -332,12 +334,13 @@
 
 						if (i<=8) {
 							html += '<div style="position:absolute; left:'+dx+'px; top:'+dy+'px;">';
-							html += '<div style="'+style+size+'">'+caption+'</div>';
+							html += '<div style="'+style+font+size+'">'+caption+'</div>';
 							html += '</div>';
 						} else {
-							var size = 'width:'+cw+'px; height:'+fontSize+'px;';
-							html += '<div style="position:absolute; left:'+dx+'px; top:'+(dy*2+cw)+'px;">';
-							html += '<div style="'+style+size+'">'+caption+'</div>';
+							var size = 'width:'+cw+'px; height:'+fontSize/2+'px;';
+							var font = 'font:'+fontSize/2+'px Sans-Serif;';
+							html += '<div style="position:absolute; left:'+dx+'px; top:'+(ch+fontSize*1.25)+'px;">';
+							html += '<div style="'+style+font+size+'">'+caption+'</div>';
 							html += '</div>';
 						}
 					}
