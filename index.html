@@ -295,32 +295,21 @@
 				var use_large_textures = 1;
 
 				var w = key.width, h = key.height;
-				var tw = th = 256;
 
-				if (use_large_textures) {
-					tw = pot(w*256), th = pot(h*256);
-					if (tw>th) th = tw; else tw = th;
-				}
+				var tsize = pot(Math.max(w,h)*256);
 
-				var cw = tw, ch = tw * h/w;
+				var cw = w>h ? tsize : tsize * w/h;
+				var ch = h>w ? tsize : tsize * h/w;
 
-				var top = margin.top;
-				var right = margin.right;
-				var bottom = margin.bottom;
-				var left = margin.left;
+				var dx = cw * margin.left/w;
+				var dy = ch * margin.top/h;
+				cw -= dx + cw * margin.right/w;
+				ch -= dy + ch * margin.bottom/h;
 
-				var k = w>h ? h/w : w/h;
-
-				var dx = cw * left *k;
-				var dy = ch * top / h;
-				cw -= dx + cw*right * k;
-				ch -= dy + ch*bottom / h;
-
-				canvas.width = tw;
-				canvas.height = th;
+				canvas.width = canvas.height = tsize;
 				var ctx = canvas.getContext( '2d' );
 				ctx.fillStyle = key.color;
-				ctx.fillRect(0, 0, tw, th);
+				ctx.fillRect(0, 0, tsize, tsize);
 				var html = '';
 				for (var i=0; i<12; i++) {
 					var caption = key.labels[i];
@@ -330,7 +319,7 @@
 						var ta = (i==0||i==3||i==6||i==9) ? 'left' : (i==1||i==4||i==7||i==10) ? 'center' : 'right';
 						var va = (i==0||i==1||i==2) ? 'top' : (i==3||i==4||i==5) ? 'middle' : 'bottom';
 
-						var fontSize = (20+textSize*8) * (tw/256) * k;
+						var fontSize = (20+textSize*8) * (tsize/256) * (w>h ? h/w : w/h);
 
 						var style = 'font:'+fontSize+'px Sans-Serif;';
 						//style += 'border: 1px solid black;'
@@ -345,7 +334,7 @@
 					}
 				}
 
-				render_html_to_canvas(html, ctx, 0, 0, tw, th, cb, canvas, obj);
+				render_html_to_canvas(html, ctx, 0, 0, tsize, tsize, cb, canvas, obj);
 			}
 
 			function pot(n) {
