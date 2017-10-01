@@ -321,6 +321,7 @@
 
 						var fontSize = (20+textSize*8) * (tsize/256) * (w>h ? h/w : w/h);
 
+						var size = 'width:'+cw+'px; height:'+ch+'px;';
 						var style = 'font:'+fontSize+'px Sans-Serif;';
 						//style += 'border: 1px solid black;'
 						style += 'text-align:'+ta+';';
@@ -328,9 +329,17 @@
 						style += 'vertical-align:'+va+';';
 						style += 'display: table-cell;';
 						style += 'word-wrap; break-all;';
-						style += 'width:'+cw+'px;';
-						style += 'height:'+ch+'px;';
-						html += '<div style="position:absolute; left:'+dx+'px; top:'+dy+'px;"><div style="'+style+'">'+caption+'</div></div>';
+
+						if (i<=8) {
+							html += '<div style="position:absolute; left:'+dx+'px; top:'+dy+'px;">';
+							html += '<div style="'+style+size+'">'+caption+'</div>';
+							html += '</div>';
+						} else {
+							var size = 'width:'+cw+'px; height:'+fontSize+'px;';
+							html += '<div style="position:absolute; left:'+dx+'px; top:'+(dy*2+cw)+'px;">';
+							html += '<div style="'+style+size+'">'+caption+'</div>';
+							html += '</div>';
+						}
 					}
 				}
 
