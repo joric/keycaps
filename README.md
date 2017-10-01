@@ -2,6 +2,8 @@
 
 Keyboard layout editor and renderer
 
+Demo: http://joric.github.io/keycaps
+
 
 ## Software
 
