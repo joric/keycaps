@@ -281,6 +281,10 @@
 				img.src = url;
 			}
 
+			function getFontSize(textSize, tsize, w, h) {
+				return (20+textSize*8) * (tsize/256) * (w>h ? h/w : w/h);
+			}
+
 			function makeTexture(key, obj, cb) {
 				var canvas = document.createElement( 'canvas' );
 
@@ -323,7 +327,7 @@
 						var ta = (i==0||i==3||i==6||i==9) ? 'left' : (i==1||i==4||i==7||i==10) ? 'center' : 'right';
 						var va = (i==0||i==1||i==2) ? 'top' : (i==3||i==4||i==5) ? 'middle' : 'bottom';
 
-						var fontSize = (20+textSize*8) * (tsize/256) * (w>h ? h/w : w/h);
+						var fontSize = getFontSize(textSize, tsize, w, h);
 
 						var style = '';
 						var size = 'width:'+cw+'px; height:'+ch+'px;';
@@ -340,9 +344,10 @@
 							html += '<div style="'+style+font+size+'">'+caption+'</div>';
 							html += '</div>';
 						} else {
+							fontSize = getFontSize(3, tsize, w, h);
 							var size = 'width:'+cw+'px; height:'+fontSize+'px;';
 							var font = 'font:'+fontSize+'px Sans-Serif; transform: scale(1, 0.5);';
-							html += '<div style="position:absolute; left:'+dx+'px; top:'+(ch+fontSize*0.8)+'px;">';
+							html += '<div style="position:absolute; left:'+dx+'px; top:'+(ch+fontSize*0.75)+'px;">';
 							html += '<div style="'+style+font+size+'">'+caption+'</div>';
 							html += '</div>';
 						}
