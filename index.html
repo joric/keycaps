@@ -340,9 +340,9 @@
 							html += '<div style="'+style+font+size+'">'+caption+'</div>';
 							html += '</div>';
 						} else {
-							var size = 'width:'+cw+'px; height:'+fontSize/2+'px;';
-							var font = 'font:'+fontSize/2+'px Sans-Serif;';
-							html += '<div style="position:absolute; left:'+dx+'px; top:'+(ch+fontSize*1.25)+'px;">';
+							var size = 'width:'+cw+'px; height:'+fontSize+'px;';
+							var font = 'font:'+fontSize+'px Sans-Serif; transform: scale(1, 0.5);';
+							html += '<div style="position:absolute; left:'+dx+'px; top:'+(ch+fontSize*0.8)+'px;">';
 							html += '<div style="'+style+font+size+'">'+caption+'</div>';
 							html += '</div>';
 						}
