@@ -463,7 +463,7 @@
 				totalKeycaps++;
 
 				makeTexture(key, obj, function(canvas, obj) {
-					obj.material = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x101010, wireframe: false } )
+					obj.material = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x303030 } )
 					obj.material.map = new THREE.CanvasTexture(canvas);
 					obj.helper = new THREE.BoxHelper( obj );
 					obj.helper.visible = false;
