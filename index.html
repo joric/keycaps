@@ -175,8 +175,8 @@
 				camera = scene.getObjectByName("Camera");
 				onWindowResize();
 
-				camera.add( new THREE.PointLight( 0xffffff, 0.2) );
-				scene.add( new THREE.AmbientLight(0xffffff, 0.8) );
+				camera.add( new THREE.PointLight( 0xffffff, 0.5) );
+				scene.add( new THREE.AmbientLight(0xffffff, 0.5) );
 
 				var keycaps = scene.getObjectByName('keycaps');
 				keycaps.visible = false;
