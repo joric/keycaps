@@ -174,9 +174,9 @@
 				scene = new THREE.ObjectLoader().parse(data);
 				camera = scene.getObjectByName("Camera");
 				onWindowResize();
-				pointLight = new THREE.PointLight( 0xffffff );
-				pointLight.position.set(1,1,2);
-				camera.add(pointLight);
+
+				camera.add( new THREE.PointLight( 0xffffff, 0.2) );
+				scene.add( new THREE.AmbientLight(0xffffff, 0.8) );
 
 				var keycaps = scene.getObjectByName('keycaps');
 				keycaps.visible = false;
@@ -550,7 +550,7 @@
 
 				$serial2.deserialize = function(data) {
 					var meta = {}, keys = [];
-					var p = {c:0,t:0,p:'',r:0,a:0,f:3,fa:[],x:0,y:0,sm:'',w:1,h:1,c:'#ffffff',t:'#000000'};
+					var p = {c:0,t:0,p:'',r:0,a:0,f:3,fa:[],x:0,y:0,sm:'',w:1,h:1,c:'#cccccc',t:'#000000'};
 					var x=0,y=0,rx=0,ry=0,ofs=Array.isArray(data[0])?0:1,rows=data.length-ofs;
 					for (row=0; row<rows; row++) {
 						data[row+ofs].forEach(function(e) {
