@@ -39,8 +39,6 @@
 		<script src="layouts/Cytokinesis-G.json"></script>
 
 		<script>
-			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
-
 			var container, stats, controls;
 			var camera, cameraTarget, scene, renderer;
 			var mouse = { x:0, y:0, pressed: false, moved: false, clicks: 0 }
@@ -505,11 +503,6 @@
 				renderer.render( scene, camera );
 			}
 
-			window.onload = function() {
-				init();
-				animate();
-			};
-
 			function toggleFullScreen(c) {
 				var c = document.body, d = document;
 				if (!d.fullscreenElement && !d.mozFullScreenElement && !d.webkitFullscreenElement && !d.msFullscreenElement ) {
@@ -596,6 +589,11 @@
 				});
 			}
 
+			window.onload = function() {
+				if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+				init();
+				animate();
+			};
 		</script>
 		</head>
 	<body>
