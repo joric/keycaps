@@ -14,6 +14,7 @@
 		<script src="models/keycaps.json"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/87/three.min.js"></script>
 		<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+		<script src="https://threejs.org/examples/js/Detector.js"></script>
 		<script src="https://sole.github.io/tween.js/build/tween.min.js"></script>
 
 		<script>
@@ -38,6 +39,8 @@
 		<script src="layouts/Cytokinesis-G.json"></script>
 
 		<script>
+			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
 			var container, stats, controls;
 			var camera, cameraTarget, scene, renderer;
 			var mouse = { x:0, y:0, pressed: false, moved: false, clicks: 0 }
