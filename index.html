@@ -286,6 +286,8 @@
 				return (20+textSize*8) * (tsize/256) * (w>h ? h/w : w/h);
 			}
 
+			function validateColor(c) { return c.substring(0,7); }
+
 			function makeTexture(key, obj, cb) {
 				var canvas = document.createElement( 'canvas' );
 
@@ -317,13 +319,13 @@
 
 				canvas.width = canvas.height = tsize;
 				var ctx = canvas.getContext( '2d' );
-				ctx.fillStyle = key.color;
+				ctx.fillStyle = validateColor(key.color);
 				ctx.fillRect(0, 0, tsize, tsize);
 				var html = '';
 				for (var i=0; i<12; i++) {
 					var caption = key.labels[i];
 					if (caption) {
-						var textColor = key.textColor[i] ? key.textColor[i] : key.default.textColor;
+						var textColor = key.textColor[i]!=null ? key.textColor[i] : key.default.textColor;
 						var textSize = key.textSize[i] ? key.textSize[i] : key.default.textSize;
 						var ta = (i==0||i==3||i==6||i==9) ? 'left' : (i==1||i==4||i==7||i==10) ? 'center' : 'right';
 						var va = (i==0||i==1||i==2) ? 'top' : (i==3||i==4||i==5) ? 'middle' : 'bottom';
@@ -335,7 +337,7 @@
 						var font = 'font:'+fontSize+'px Sans-Serif;';
 						//style += 'border: 1px solid black;'
 						style += 'text-align:'+ta+';';
-						style += 'color:'+textColor+';';
+						style += 'color:'+validateColor(textColor)+';';
 						style += 'vertical-align:'+va+';';
 						style += 'display: table-cell;';
 						style += 'word-wrap; break-all;';
@@ -415,6 +417,7 @@
 				if (h==2) { profile='DCS'; rs='PLUS'; }
 
 				if (rs!='R2' && w==1.5) rs='R2';
+				if (rs!='R3' && w==1.75) rs='R3';
 
 				var id = rs + ( w>1 ? ' '+w : '');
 
