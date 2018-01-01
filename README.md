@@ -33,7 +33,8 @@ All copyrights to resource files belong to their respective owners.
 
 ## References
 
-* Keyboard layouts: https://github.com/ijprest/keyboard-layout-editor
-* JavaScript 3D library: https://github.com/mrdoob/three.js
-* OpenSCAD models: https://github.com/rsheldiii/openSCAD-projects
-* OpenSCAD and Blender SA models: https://github.com/getclacking/SA-profile-keys-3D-models
+* [Keyboard layout editor](https://github.com/ijprest/keyboard-layout-editor)
+* [JavaScript 3D library](https://github.com/mrdoob/three.js)
+* [OpenSCAD models by rsheldiii](https://github.com/rsheldiii/openSCAD-projects)
+* [OpenSCAD and Blender SA models](https://github.com/getclacking/SA-profile-keys-3D-models)
+* [Keyset database (Google doc)](https://docs.google.com/spreadsheets/d/1byRpKCGR8tbV8tyTb3vwhLyiOcCgxbRTDUptnWgG3IE/edit#gid=0)
