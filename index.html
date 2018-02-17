@@ -262,7 +262,7 @@
 				if (location.hash) {
 					hash = location.hash.slice(1);
 					if (hash.startsWith('/gists/')) {
-						document.getElementById('gist').value = 'http://www.keyboard-layout-editor.com'+hash;
+						document.getElementById('gist').value = 'http://www.keyboard-layout-editor.com/#'+hash;
 						loadGist(hash);
 					} else {
 						setName = decodeURIComponent(hash);
