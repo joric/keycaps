@@ -249,12 +249,7 @@
 					ctrl.add(option);
 				});
 
-				var setName = location.hash ? decodeURIComponent(location.hash.slice(1)) : Object.keys(sets)[0];
-
-				var e = ctrl.getElementsByTagName('option');
-				for (var i=0; i<e.length; i++) {
-					e[i].selected = (setName === e[i].value);
-				}
+				var setName = Object.keys(sets)[0];
 
 				container = document.createElement( 'div' );
 				document.body.appendChild( container );
@@ -264,7 +259,22 @@
 				container.appendChild( renderer.domElement );
 				window.addEventListener( 'resize', onWindowResize, false );
 
-				ctrl.dispatchEvent(new Event('change'));
+				if (location.hash) {
+					hash = location.hash.slice(1);
+					if (hash.startsWith('/gists/')) {
+						document.getElementById('gist').value = 'http://www.keyboard-layout-editor.com'+hash;
+						loadGist(hash);
+					} else {
+						setName = decodeURIComponent(hash);
+						var e = ctrl.getElementsByTagName('option');
+						for (var i=0; i<e.length; i++) {
+							e[i].selected = (setName === e[i].value);
+						}
+						setName = ctrl[ctrl.selectedIndex].value;
+						deserialize(sets[setName]);
+					}
+				}
+
 			}
 
 			function onWindowResize() {
@@ -627,6 +637,7 @@
 
 			function loadGist(setName) {
 					setName = setName.substr(setName.indexOf('gists/'));
+					location.hash = '/'+setName;
 					loadJSONP('https://api.github.com/'+setName, function(data) {
 					for (key in data.data.files) {
 						if (key.endsWith('.json')) {
@@ -652,7 +663,7 @@
 			<select id="preset"></select>
 			</td>
 			<td width="100%">
-			<input type="text" placeholder="http://www.keyboard-layout-editor.com/#/gists/..." style="width:100%" onchange=loadGist(this.value)>
+			<input type="text" id="gist" placeholder="http://www.keyboard-layout-editor.com/#/gists/..." style="width:100%" onchange=loadGist(this.value)>
 			</td>
 			</table>
 		</div>
