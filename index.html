@@ -483,6 +483,7 @@
 				makeTexture(key, obj, function(canvas, obj) {
 					obj.material = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x202020 } )
 					obj.material.map = new THREE.CanvasTexture(canvas);
+					obj.material.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
 					obj.helper = new THREE.BoxHelper( obj );
 					obj.helper.visible = false;
 					obj.helper.name = 'bounds';
