@@ -265,7 +265,7 @@
 						document.getElementById('gist').value = 'http://www.keyboard-layout-editor.com/#'+hash;
 						loadGist(hash);
 					} else {
-						setName = decodeURIComponent(hash);
+						setName = hash ? decodeURIComponent(hash) : Object.keys(sets)[0];
 						var e = ctrl.getElementsByTagName('option');
 						for (var i=0; i<e.length; i++) {
 							e[i].selected = (setName === e[i].value);
