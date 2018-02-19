@@ -258,6 +258,8 @@
 				renderer = new THREE.WebGLRenderer( { antialias: antialias } );
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.setClearColor(0xdddddd, 1.0);
+				renderer.clearColor();
 				container.appendChild( renderer.domElement );
 				window.addEventListener( 'resize', onWindowResize, false );
 
