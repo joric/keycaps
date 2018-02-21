@@ -577,6 +577,7 @@
 								var key = {x:x,y:y,x2:0,y2:0,rotation_x:rx,rotation_y:ry,
 									labels:unp(e,p.a),textColor:unp(p.t,p.a),textSize:unp(p.fa,p.a),
 									default:{textColor:p.t, textSize:p.f}};
+								p.fa = undefined
 								Object.keys(kf).forEach(function(f) { if (p[f]!=undefined) key[kf[f]] = p[f]; });
 								keys.push(key);
 								x += p.w;
