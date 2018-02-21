@@ -18,6 +18,7 @@
 		<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
 		<script src="https://threejs.org/examples/js/Detector.js"></script>
 		<script src="https://sole.github.io/tween.js/build/tween.min.js"></script>
+		<script src="serial.js"></script>
 
 		<script>
 			var sets = {};
@@ -577,7 +578,6 @@
 								var key = {x:x,y:y,x2:0,y2:0,rotation_x:rx,rotation_y:ry,
 									labels:unp(e,p.a),textColor:unp(p.t,p.a),textSize:unp(p.fa,p.a),
 									default:{textColor:p.t, textSize:p.f}};
-								p.fa = undefined
 								Object.keys(kf).forEach(function(f) { if (p[f]!=undefined) key[kf[f]] = p[f]; });
 								keys.push(key);
 								x += p.w;
@@ -601,7 +601,7 @@
 
 			function deserialize(data) {
 				initScene();
-				var keyboard = $serial2.deserialize(data);
+				var keyboard = $serial.deserialize(data);
 				var rows = 0; keyboard.keys.forEach(function(k) { if (k.y!=y) rows++; y = k.y; });
 				var row = 0;
 				var y = 0;
