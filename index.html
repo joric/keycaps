@@ -270,6 +270,7 @@
 						document.getElementById('gist').value = 'http://www.keyboard-layout-editor.com/#'+hash;
 						loadGist(hash);
 					} else {
+						setName = decodeURIComponent(hash);
 						var e = ctrl.getElementsByTagName('option');
 						for (var i=0; i<e.length; i++) {
 							e[i].selected = (setName === e[i].value);
