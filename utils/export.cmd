@@ -14,7 +14,11 @@ blender %blend% --background --python %script% -- %json% --vertices --faces --no
 
 if exist "%json%" goto success
 
-echo error on exporting (editmode enabled? forgot to save file?)
+echo error on exporting (editmode enabled? forgot to save file? did not copy addon scripts)
+
+rem don't forget to copy addon scripts (three r87) and enable them in settings, something like:
+rem xcopy %threejs%\utils\exporters\blender\addons\io_three %blender%\scripts\addons
+
 pause
 goto end
 
@@ -29,6 +33,6 @@ del %tmpfile%
 
 cd /d %~dp0\..
 
-start index.html
+rem start index.html - fails in chrome now
 
 :end
