@@ -55,6 +55,7 @@
 			var sceneBounds = null;
 
 			function pickObject() {
+				if (!camera) return null;
 				var vector = new THREE.Vector3(mouse.x, mouse.y, 1);
 				vector.unproject(camera);
 				var ray = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
