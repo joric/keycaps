@@ -1,694 +1,702 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		<title>Keycaps</title>
-
-		<style>
-			body { padding: 0; margin: 0; overflow: hidden; background-color: #ddd; }
-			.controls { position: absolute; left: 10px; top: 10px; right: 10px; }
-			.github { position: absolute; right: 10px; bottom: 5px; }
-			#info { position: absolute; left: 14px; bottom: 10px;
-				font-family: Segoe UI, Arial, Helvetica, sans-serif; font-size: 14px;}
-		</style>
-
-		<script src="models/keycaps.json"></script>
-		<script src="three.min.js"></script>
-		<script src="OrbitControls.js"></script>
-		<script src="Detector.js"></script>
-		<script src="tween.min.js"></script>
-		<script src="serial.js"></script>
-
-		<script>
-			var sets = {};
-			var antialias = true;
-			var show_helpers = false;
-		</script>
-
-		<script src="config.js"></script>
-		<script src="layouts/Keycap Profiles.json"></script>
-		<script src="layouts/Default 60.json"></script>
-		<script src="layouts/ANSI 104.json"></script>
-		<script src="layouts/Stealth Black.json"></script>
-		<script src="layouts/PMK Grab Bag (Aug 23, 2017).json"></script>
-		<script src="layouts/GB-Retro-DSA.json"></script>
-		<script src="layouts/Leopold FC660m.json"></script>
-		<script src="layouts/Symbolics-364000.json"></script>
-		<script src="layouts/Atreus.json"></script>
-		<script src="layouts/Atreus-62.json"></script>
-		<script src="layouts/Ergodox.json"></script>
-		<script src="layouts/Mitosis-MJT.json"></script>
-		<script src="layouts/HHKB-Pro-2.json"></script>
-		<script src="layouts/Cytokinesis-G.json"></script>
-
-		<script>
-			var container, stats, controls;
-			var camera, cameraTarget, scene, renderer;
-			var mouse = { x:0, y:0, pressed: false, moved: false, clicks: 0 }
-			var selected;
-			var hover;
-			var selectTimer = null;
-			var clickTimer = null;
-			var loadedKeycaps = 0;
-			var totalKeycaps = 0;
-			var sceneBounds = null;
-
-			function pickObject() {
-				if (!camera) return null;
-				var vector = new THREE.Vector3(mouse.x, mouse.y, 1);
-				vector.unproject(camera);
-				var ray = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
-				var intersects = ray.intersectObjects(scene.getObjectByName('layouts').children);
-				for (var i=0; i<intersects.length; i++) {
-					var obj = intersects[i].object;
-
-					if (obj.name!='bounds') return obj;
-				}
-				return null;
-			}
-
-			function selectObject(obj, select) {
-				if (!obj) return;
-				obj.selected = true;
-				if (obj && obj.helper && show_helpers) obj.helper.visible = select;
-			}
-
-			document.addEventListener('mousedown', function(event) {
-				mouse.xc = mouse.x;
-				mouse.yc = mouse.y;
-				mouse.pressed = true;
-				mouse.moved = false;
-				mouse.clicks++;
-				clickTimer = setTimeout(function() { mouse.clicks = 0; }, 300);
-			}, false);
-
-			document.addEventListener('mouseup', function(event) {
-				clearTimeout(selectTimer);
-				mouse.pressed = false;
-				if (mouse.clicks) {
-					var obj = pickObject();
-					if (obj) {
-						if (selected!=obj) {
-							selected = obj;
-							zoomIn(obj);
-						} else {
-							selected = null;
-							zoomOut();
-						}
-					} else zoomOut();
-				}
-			}, false);
-
-			document.addEventListener('mousemove', function(event) {
-				clearTimeout(selectTimer);
-				mouse.moved = true;
-				mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-				mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-				if (!mouse.pressed) {
-					var obj = pickObject();
-					if (obj) {
-						if (hover && obj!=hover) selectObject(hover, false);
-						selectObject(obj, true);
-						hover = obj;
-					} else {
-						selectObject(hover, false);
-					}
-				}
-
-			}, false);
-
-
-			function moveAndLookAt(camera, dstpos, dstlookat) {
-				var origpos = new THREE.Vector3().copy(camera.position);
-				var origrot = new THREE.Euler().copy(camera.rotation);
-
-				camera.position.set(dstpos.x, dstpos.y, dstpos.z);
-				camera.lookAt(dstlookat);
-				var dstrot = new THREE.Euler().copy(camera.rotation);
-
-				camera.position.set(origpos.x, origpos.y, origpos.z);
-				camera.rotation.set(origrot.x, origrot.y, origrot.z);
-
-				var dest = new THREE.Quaternion().setFromEuler(dstrot);
-				var o = {t: 0};
-
-				new TWEEN.Tween(o).to({t: 1}, 500).onUpdate(function () {
-					camera.position.lerpVectors(origpos, dstpos, o.t);
-					camera.quaternion.slerp(dest, o.t);
-				}).easing(TWEEN.Easing.Cubic.InOut).start();
-			}
-
-			function zoomIn(obj, dist) {
-				dist = dist || 75;
-				var layouts = scene.getObjectByName('layouts');
-				var center = new THREE.Vector3();
-				center.setFromMatrixPosition( obj.matrixWorld );
-				controls.target.copy(center);
-				var newpos = new THREE.Vector3(center.x, center.y+dist, center.z+0.01);
-				moveAndLookAt(camera, newpos, center)
-			}
-
-			function zoomOut() {
-				if (!sceneBounds) return;
-				var bounds = sceneBounds;
-				var size = bounds.getSize();
-				var center = bounds.getCenter();
-
-				controls.target.copy(center);
-
-				var sw = window.innerWidth;
-				var sh = window.innerHeight;
-				var w = size.x;
-				var h = size.z;
-
-				var hdist = h*2;
-				var wdist = w*sh/sw*2;
-
-				var dw = Math.abs(sw-w);
-				var dh = Math.abs(sh-h);
-				var dk = sw/w;
-
-				var dist = h*dk < sh ? wdist : hdist*1.3;
-
-				var newpos = new THREE.Vector3(center.x, center.y + dist*1.05, center.z+0.01);
-				moveAndLookAt(camera, newpos, center)
-			}
-
-			function initScene() {
-				scene = new THREE.ObjectLoader().parse(data);
-				camera = scene.getObjectByName("Camera");
-				onWindowResize();
-
-				camera.add( new THREE.PointLight( 0xffffff, 0.5) );
-				scene.add( new THREE.AmbientLight(0xffffff, 0.5) );
-
-				var keycaps = scene.getObjectByName('keycaps');
-				keycaps.visible = false;
-				keycaps.rotation.set(-Math.PI/2, 0,-Math.PI*2);
-				keycaps.traverse( function(obj) {
-					if ( obj instanceof THREE.Mesh ) {
-						obj.rotation.set(0,0,0);
-						obj.geometry.scale(-1,-1,1);
-					}
-				});
-
-				if (!scene.getObjectByName('layouts')) {
-					var layouts = new THREE.Group();
-					layouts.name = 'layouts';
-					scene.add(layouts);
-					layouts.rotation.set(-Math.PI/2, 0,-Math.PI*2);
-				}
-
-				scene.background = new THREE.Color( 0xdddddd );
-
-				controls = new THREE.OrbitControls( camera, container );
-				controls.autoRotate = false;
-				//container.ondblclick = function() { controls.autoRotate = !controls.autoRotate; }
-
-				camera.position.set(0,10000,0);
-			}
-
-
-			function init() {
-				document.getElementById('files').addEventListener('change', function(evt){
-					for (var i = 0, f; f = evt.target.files[i]; i++) {
-						try {
-							var file = evt.target.files[i];
-							var start = 0;
-							var stop = file.size - 1;
-							var reader = new FileReader();
-							reader.onloadend = function(evt) {
-								if (evt.target.readyState == FileReader.DONE) {
-									var json = evt.target.result;
-									deserialize(JSON.parse(json));
-								}
-							};
-							var blob = file.slice(start, stop + 1);
-							reader.readAsBinaryString(blob);
-						} catch (err) {
-							console.log(err.message);
-						}
-					}
-				});
-
-				var ctrl = document.getElementById('preset');
-
-				ctrl.addEventListener('change', function(evt) {
-					var setName = this[this.selectedIndex].value;
-					location.hash = encodeURIComponent(setName);
-
-					if (setName.startsWith('gists/')) {
-						loadGist(setName);
-					} else {
-						deserialize(sets[setName]);
-					}
-
-				}, false);
-
-				Object.keys(sets).forEach(function(key) {
-					var option = document.createElement('option');
-					option.text = key;
-					option.value = key;
-					ctrl.add(option);
-				});
-
-				var setName = Object.keys(sets)[0];
-
-				container = document.createElement( 'div' );
-				document.body.appendChild( container );
-				renderer = new THREE.WebGLRenderer( { antialias: antialias } );
-				renderer.setPixelRatio( window.devicePixelRatio );
-				renderer.setSize( window.innerWidth, window.innerHeight );
-				renderer.setClearColor(0xdddddd, 1.0);
-				renderer.clearColor();
-				container.appendChild( renderer.domElement );
-				window.addEventListener( 'resize', onWindowResize, false );
-
-				if (location.hash) {
-					hash = location.hash.slice(1);
-					if (hash.startsWith('/gists/')) {
-						document.getElementById('gist').value = 'http://www.keyboard-layout-editor.com/#'+hash;
-						loadGist(hash);
-					} else {
-						setName = decodeURIComponent(hash);
-						var e = ctrl.getElementsByTagName('option');
-						for (var i=0; i<e.length; i++) {
-							e[i].selected = (setName === e[i].value);
-						}
-						setName = ctrl[ctrl.selectedIndex].value;
-						deserialize(sets[setName]);
-					}
-				} else {
-						deserialize(sets[setName]);
-				}
-
-			}
-
-			function onWindowResize() {
-				camera.aspect = window.innerWidth / window.innerHeight;
-				camera.updateProjectionMatrix();
-				renderer.setSize( window.innerWidth, window.innerHeight );
-			}
-
-			function render_html_to_canvas(html, ctx, x, y, w, h, cb, canvas, obj) {
-				var doc = document.implementation.createHTMLDocument('');
-				doc.body.innerHTML = html;
-				doc.documentElement.setAttribute('xmlns', doc.documentElement.namespaceURI);
-				var xml = (new XMLSerializer).serializeToString(doc.body);
-				var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">' +
-					'<foreignObject width="100%" height="100%">'+xml+'</foreignObject></svg>';
-				var url = 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
-				var img = new Image();
-				img.onload = function() { ctx.drawImage(img, x, y); cb(canvas, obj); }
-				img.src = url;
-			}
-
-			function getFontSize(textSize, tsize, w, h) {
-				return (20+textSize*8) * (tsize/256) * (w>h ? h/w : w/h);
-			}
-
-			function validateColor(c) { return c.substring(0,7); }
-
-			function makeTexture(key, obj, cb) {
-				var canvas = document.createElement( 'canvas' );
-
-				var margins = {
-					'DCS': {top:0.1, right:0.2, bottom:0.25, left:0.2},
-					'SA' : {top:0.2, right:0.2, bottom:0.2, left:0.2},
-					'DSA': {top:0.2, right:0.2, bottom:0.2, left:0.2},
-					'G20': {top:0.1, right:0.15, bottom:0.2, left:0.15}
-				};
-
-				var margin = margins['DCS'];
-				Object.keys(margins).forEach(function(key) {
-					if (obj.name.includes(key)) margin = margins[key];
-				});
-
-				var use_large_textures = 1;
-
-				var w = key.width, h = key.height;
-
-				var tsize = pot(Math.max(w,h)*256);
-
-				var cw = w>h ? tsize : tsize * w/h;
-				var ch = h>w ? tsize : tsize * h/w;
-
-				var dx = cw * margin.left/w;
-				var dy = ch * margin.top/h;
-				cw -= dx + cw * margin.right/w;
-				ch -= dy + ch * margin.bottom/h;
-
-				canvas.width = canvas.height = tsize;
-				var ctx = canvas.getContext( '2d' );
-				ctx.fillStyle = validateColor(key.color);
-				ctx.fillRect(0, 0, tsize, tsize);
-				var html = '';
-				for (var i=0; i<12; i++) {
-					var caption = key.labels[i];
-					if (caption) {
-						var textColor = key.textColor[i]!=null ? key.textColor[i] : key.default.textColor;
-						var textSize = key.textSize[i] ? key.textSize[i] : key.default.textSize;
-						var ta = (i==0||i==3||i==6||i==9) ? 'left' : (i==1||i==4||i==7||i==10) ? 'center' : 'right';
-						var va = (i==0||i==1||i==2) ? 'top' : (i==3||i==4||i==5) ? 'middle' : 'bottom';
-
-						var fontSize = getFontSize(textSize, tsize, w, h);
-
-						var style = '';
-						var size = 'width:'+cw+'px; height:'+ch+'px;';
-						var font = 'font:'+fontSize+'px Sans-Serif;';
-						//style += 'border: 1px solid black;'
-						style += 'text-align:'+ta+';';
-						style += 'color:'+validateColor(textColor)+';';
-						style += 'vertical-align:'+va+';';
-						style += 'display: table-cell;';
-						style += 'word-wrap; break-all;';
-
-						if (i<=8) {
-							html += '<div style="position:absolute; left:'+dx+'px; top:'+dy+'px;">';
-							html += '<div style="'+style+font+size+'">'+caption+'</div>';
-							html += '</div>';
-						} else {
-							fontSize = getFontSize(3, tsize, w, h);
-							var size = 'width:'+cw+'px; height:'+fontSize+'px;';
-							var font = 'font:'+fontSize+'px Sans-Serif; transform: scale(1, 0.5);';
-							html += '<div style="position:absolute; left:'+dx+'px; top:'+(ch+fontSize*0.75)+'px;">';
-							html += '<div style="'+style+font+size+'">'+caption+'</div>';
-							html += '</div>';
-						}
-					}
-				}
-
-				render_html_to_canvas(html, ctx, 0, 0, tsize, tsize, cb, canvas, obj);
-			}
-
-			function pot(n) {
-				var x = 1;
-				while (x<n) x*=2;
-				return x;
-			}
-
-			function profile_row(profile, row, rows) {
-				if (profile=='SA') return 3;
-				if (rows==6) return [1,1,2,3,4,4][row];
-				else if (rows==5) return [1,2,3,4,4][row];
-				return row>3 ? 4 : Math.floor(row+1);
-			}
-
-			function getXY(x,y,w,h) {
-				s = 19.05; // 3/4 inch, precisely 19.05 mm
-				var ox = (x+w/2)*s;
-				var oy = -(y+h/2)*s;
-				return {x:ox, y:oy};
-			}
-
-			function add_keycap(key, row, rows) {
-				var keycaps = scene.getObjectByName('keycaps');
-				var layout = scene.getObjectByName('layouts');
-				var profile = 'DCS';
-				var w = key.width, h = key.height;
-				var space = w>=6.25;
-				var flip = false;
-				rs = '';
-
-				['DCS','DSA','SA','G20'].forEach(function(s) {if (key.profile.startsWith(s)) profile = s; });
-				['R1','R2','R3','R4'].forEach( function(s) { if (key.profile.includes(' '+s)) rs = s; });
-
-				if (profile=='DSA' && rs=='SPACE') profile='DCS';
-				if (profile=='SA' && rs=='') rs='R3';
-				if (profile=='DSA' && w>1) profile='DCS';
-				if (profile == 'DSA') rs='R3';
-
-				//if (profile=='SA' && rs=='R3') rs='R3.001';
-				//if (profile=='DSA' && rs=='R3') rs='R3.001';
-
-				var r = profile_row(profile, row, rows);
-
-				if (rs=='') rs = 'R' + r;
-
-				if (profile=='SA' && rs=='R3') {
-					if (w==1.5) rs='R2';
-					if (w==1.25) rs='R4';
-					if (w==2) rs='R1';
-				}
-
-				if (profile=='DCS' && rs=='R4') {
-					if (w==2) rs='R1';
-				}
-
-				if (h==2) { profile='DCS'; rs='PLUS'; }
-
-				if (rs!='R2' && w==1.5) rs='R2';
-				if (rs!='R3' && w==1.75) rs='R3';
-
-				var id = rs + ( w>1 ? ' '+w : '');
-
-				if (w==1 && h==1.5) { flip=true; id = 'R2 1.5'; profile=='DSA' ? 'DCS': profile; }
-
-				var name = space ? (profile+' SPACE' ) : (profile + ' ' + id);
-
-				var obj = keycaps.getObjectByName(name);
-				obj = obj ? obj.clone() : keycaps.getObjectByName(profile+' R3').clone();
-
-				var x = key.x;
-				var y = key.y;
-				var rx = key.rotation_x;
-				var ry = key.rotation_y;
-				var ra = key.rotation_angle;
-
-				var o = getXY(x, y, w, h);
-
-				if (ra!=0) {
-					c = getXY(rx, ry, 0, 0);
-					var az = -ra * Math.PI / 180.0;
-					obj.position.set(o.x, o.y, 0);
-
-					var m0 = new THREE.Matrix4();
-					var m1 = new THREE.Matrix4();
-					var m2 = new THREE.Matrix4();
-					var m3 = new THREE.Matrix4();
-					var m4 = new THREE.Matrix4();
-
-					m0.makeTranslation(c.x, c.y, 0);
-					m1.makeRotationZ(az);
-					m2.makeTranslation(-c.x, -c.y, 0);
-					m3.makeTranslation(o.x, o.y, 0);
-					m4.makeRotationZ(flip ? (ra>0 ? 1: -1 ) * Math.PI/2 : 0);
-
-					obj.matrix = m0.multiply(m1).multiply(m2).multiply(m3).multiply(m4);
-
-					obj.matrixAutoUpdate = false;
-
-				} else {
-					obj.position.set(o.x, o.y, 0);
-					if (flip)
-						obj.rotation.set(0,0,Math.PI/2);
-				}
-
-				obj.angle = ra;
-				totalKeycaps++;
-
-				makeTexture(key, obj, function(canvas, obj) {
-					obj.material = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x202020 } )
-					obj.material.map = new THREE.CanvasTexture(canvas);
-					obj.material.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
-					obj.helper = new THREE.BoxHelper( obj );
-					obj.helper.visible = false;
-					obj.helper.name = 'bounds';
-					layout.add(obj.helper);
-					layout.add(obj);
-					loadedKeycaps++;
-				});
-			}
-
-			function animate() {
-
-				requestAnimationFrame( animate );
-				var t = TWEEN.update();
-
-				if (!t && controls && controls.autoRotate) {
-					controls.autoRotateSpeed = 3.0;
-					controls.update();
-				}
-
-				if (controls) render();
-
-				if (loadedKeycaps>0 && loadedKeycaps==totalKeycaps) {
-					totalKeycaps = loadedKeycaps = 0;
-					var layouts = scene.getObjectByName('layouts');
-					var helper = new THREE.BoxHelper(layouts);
-					helper.name = 'bounds';
-					helper.visible = show_helpers;
-					scene.add(helper);
-					sceneBounds = new THREE.Box3().setFromObject(layouts);
-					zoomOut();
-				}
-			}
-
-			function render() {
-				renderer.render( scene, camera );
-			}
-
-			function toggleFullScreen(c) {
-				var c = document.body, d = document;
-				if (!d.fullscreenElement && !d.mozFullScreenElement && !d.webkitFullscreenElement && !d.msFullscreenElement ) {
-					if (c.requestFullscreen) c.requestFullscreen();
-					else if (c.msRequestFullscreen) c.msRequestFullscreen();
-					else if (c.mozRequestFullScreen) c.mozRequestFullScreen();
-					else if (c.webkitRequestFullscreen) c.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-				} else {
-					if (document.exitFullscreen) document.exitFullscreen();
-					else if (document.msExitFullscreen) document.msExitFullscreen();
-					else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
-					else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-				}
-			}
-
-			document.onkeypress = function(e) {
-				var c = String.fromCharCode(e.charCode);
-				if (c.toLowerCase()=='f') toggleFullScreen();
-				if (c.toLowerCase()=='r') controls.autoRotate = !controls.autoRotate;
-			};
-
-			$serial2 = {};
-
-			(function () {
-				var kf = {w:'width',h:'height',w2:'width2',h2:'height2',r:'rotation_angle', rx:'rotation_x',
-					ry:'rotation_y',c:'color',p:'profile',n:'nub',g:'ghost',l:'stepped',d:'decal'};
-
-				var kl = [
-					[ 0, 6, 2, 8, 9,11, 3, 5, 1, 4, 7,10], [ 1, 7,-1,-1, 9,11, 4,-1,-1,-1,-1,10],
-					[ 3,-1, 5,-1, 9,11,-1,-1, 4,-1,-1,10], [ 4,-1,-1,-1, 9,11,-1,-1,-1,-1,-1,10],
-					[ 0, 6, 2, 8,10,-1, 3, 5, 1, 4, 7,-1], [ 1, 7,-1,-1,10,-1, 4,-1,-1,-1,-1,-1],
-					[ 3,-1, 5,-1,10,-1,-1,-1, 4,-1,-1,-1], [ 4,-1,-1,-1,10,-1,-1,-1,-1,-1,-1,-1],
-				];
-
-				function unp(data, align) {
-					var v = typeof data==='string' ? data.split('\n') : (data ? data : []);
-					var out = new Array(12);
-					for(var i=0; i<v.length; i++) out[kl[align][i]] = v[i];
-					return out;
-				}
-
-				$serial2.deserialize = function(data) {
-					var meta = data[0], keys = [];
-					var p = {c:0,t:0,p:'',r:0,a:0,f:3,fa:[],x:0,y:0,sm:'',w:1,h:1,c:'#cccccc',t:'#000000'};
-					var x=0,y=0,rx=0,ry=0,ofs=Array.isArray(data[0])?0:1,rows=data.length-ofs;
-					for (row=0; row<rows; row++) {
-						data[row+ofs].forEach(function(e) {
-							if (typeof e == 'string') {
-								var key = {x:x,y:y,x2:0,y2:0,rotation_x:rx,rotation_y:ry,
-									labels:unp(e,p.a),textColor:unp(p.t,p.a),textSize:unp(p.fa,p.a),
-									default:{textColor:p.t, textSize:p.f}};
-								Object.keys(kf).forEach(function(f) { if (p[f]!=undefined) key[kf[f]] = p[f]; });
-								keys.push(key);
-								x += p.w;
-								p.w = p.h = 1;
-							} else {
-								Object.keys(e).forEach(function(key) { p[key] = e[key]; });
-								if (p.rx!=undefined) { rx = x = p.rx; y = ry; }
-								if (p.ry!=undefined) { ry = y = p.ry; }
-								p.rx = p.ry = undefined;
-								x += p.x;
-								y += p.y;
-								p.x = p.y = p.n = p.l = 0;
-							}
-						});
-						x = rx;
-						y++;
-					}
-					return {meta:meta, keys:keys};
-				}
-			}());
-
-			function deserialize(data) {
-				initScene();
-				var keyboard = $serial.deserialize(data);
-				var rows = 0; keyboard.keys.forEach(function(k) { if (k.y!=y) rows++; y = k.y; });
-				var row = 0;
-				var y = 0;
-				keyboard.keys.forEach(function(k) {
-					//console.log(JSON.stringify(k));
-					if (k.y!=y) row++;
-					add_keycap(k, row, rows);
-					y = k.y;
-				});
-
-				var str = '';
-				if (keyboard.meta) {
-					if (keyboard.meta.name) str += keyboard.meta.name;
-					if (keyboard.meta.author) {
-						if (str) str += '<br/>';
-						str += '<i>' + keyboard.meta.author + '</i>';
-					}
-					document.getElementById('info').innerHTML = str;
-				}
-			}
-
-			window.onload = function() {
-				if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
-				init();
-				animate();
-			};
-
-			var loadJSONP = (function() {
-				var unique = 0;
-				return function(url, callback, context) {
-
-					var name = "_jsonp_" + unique++;
-					if (url.match(/\?/)) url += "&callback="+name;
-					else url += "?callback="+name;
-	
-					var script = document.createElement('script');
-					script.type = 'text/javascript';
-					script.src = url;
-
-					window[name] = function(data) {
-						callback.call((context || window), data);
-						document.getElementsByTagName('head')[0].removeChild(script);
-						script = null;
-						delete window[name];
-					}
-
-					document.getElementsByTagName('head')[0].appendChild(script);
-				}
-			})();
-
-			function loadGist(setName) {
-					setName = setName.substr(setName.indexOf('gists/'));
-					location.hash = '/'+setName;
-					loadJSONP('https://api.github.com/'+setName, function(data) {
-					for (key in data.data.files) {
-						if (key.endsWith('.json')) {
-							json = JSON.parse(data.data.files[key].content);
-							deserialize(json);
-						}
-					}
-				});
-			}
-
-		</script>
-		</head>
-	<body>
-
-		<div class="controls">
-			<table width="100%">
-			<tr>
-			<td width="1px">
-			<input type="file" id="files" name="files[]" multiple="multiple" accept=".json" style="display:none"/>
-			<input type="button" value="Browse..." onclick="document.getElementById('files').click();" />
-			</td>
-			<td width="1px">
-			<select id="preset"></select>
-			</td>
-			<td width="100%">
-			<input type="text" id="gist" placeholder="http://www.keyboard-layout-editor.com/#/gists/..." style="width:100%" onchange=loadGist(this.value)>
-			</td>
-			</table>
-		</div>
-
-		<div id="info"></div>
-		<div class="github"><a href="https://github.com/joric/keycaps"><svg style="fill:#000; opacity:0.25" height="24" width="24" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path></svg></a></div>
-	</body>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <title>Keycaps</title>
+
+        <style>
+            body { padding: 0; margin: 0; overflow: hidden; background-color: #ddd; }
+            .controls { position: absolute; left: 10px; top: 10px; right: 10px; }
+            .github { position: absolute; right: 10px; bottom: 5px; }
+            #info { position: absolute; left: 14px; bottom: 10px;
+                font-family: Segoe UI, Arial, Helvetica, sans-serif; font-size: 14px;}
+        </style>
+
+        <script src="models/keycaps.json"></script>
+        <script src="three.min.js"></script>
+        <script src="OrbitControls.js"></script>
+        <script src="Detector.js"></script>
+        <script src="tween.min.js"></script>
+        <script src="serial.js"></script>
+
+        <script>
+            var sets = {};
+            var antialias = true;
+            var show_helpers = false;
+        </script>
+
+        <script src="config.js"></script>
+        <script src="layouts/Keycap Profiles.json"></script>
+        <script src="layouts/Default 60.json"></script>
+        <script src="layouts/ANSI 104.json"></script>
+        <script src="layouts/Stealth Black.json"></script>
+        <script src="layouts/PMK Grab Bag (Aug 23, 2017).json"></script>
+        <script src="layouts/GB-Retro-DSA.json"></script>
+        <script src="layouts/Leopold FC660m.json"></script>
+        <script src="layouts/Symbolics-364000.json"></script>
+        <script src="layouts/Atreus.json"></script>
+        <script src="layouts/Atreus-62.json"></script>
+        <script src="layouts/Ergodox.json"></script>
+        <script src="layouts/Mitosis-MJT.json"></script>
+        <script src="layouts/HHKB-Pro-2.json"></script>
+        <script src="layouts/Cytokinesis-G.json"></script>
+
+        <script>
+            var container, stats, controls;
+            var camera, cameraTarget, scene, renderer;
+            var mouse = { x:0, y:0, pressed: false, moved: false, clicks: 0 }
+            var selected;
+            var hover;
+            var selectTimer = null;
+            var clickTimer = null;
+            var loadedKeycaps = 0;
+            var totalKeycaps = 0;
+            var sceneBounds = null;
+
+            function pickObject() {
+                if (!camera) return null;
+                var vector = new THREE.Vector3(mouse.x, mouse.y, 1);
+                vector.unproject(camera);
+                var ray = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
+                var intersects = ray.intersectObjects(scene.getObjectByName('layouts').children);
+                for (var i=0; i<intersects.length; i++) {
+                    var obj = intersects[i].object;
+
+                    if (obj.name!='bounds') return obj;
+                }
+                return null;
+            }
+
+            function selectObject(obj, select) {
+                if (!obj) return;
+                obj.selected = true;
+                if (obj && obj.helper && show_helpers) obj.helper.visible = select;
+            }
+
+            document.addEventListener('mousedown', function(event) {
+                mouse.xc = mouse.x;
+                mouse.yc = mouse.y;
+                mouse.pressed = true;
+                mouse.moved = false;
+                mouse.clicks++;
+                clickTimer = setTimeout(function() { mouse.clicks = 0; }, 300);
+            }, false);
+
+            document.addEventListener('mouseup', function(event) {
+                clearTimeout(selectTimer);
+                mouse.pressed = false;
+                if (mouse.clicks) {
+                    var obj = pickObject();
+                    if (obj) {
+                        if (selected!=obj) {
+                            selected = obj;
+                            zoomIn(obj);
+                        } else {
+                            selected = null;
+                            zoomOut();
+                        }
+                    } else zoomOut();
+                }
+            }, false);
+
+            document.addEventListener('mousemove', function(event) {
+                clearTimeout(selectTimer);
+                mouse.moved = true;
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+                if (!mouse.pressed) {
+                    var obj = pickObject();
+                    if (obj) {
+                        if (hover && obj!=hover) selectObject(hover, false);
+                        selectObject(obj, true);
+                        hover = obj;
+                    } else {
+                        selectObject(hover, false);
+                    }
+                }
+
+            }, false);
+
+
+            function moveAndLookAt(camera, dstpos, dstlookat) {
+                var origpos = new THREE.Vector3().copy(camera.position);
+                var origrot = new THREE.Euler().copy(camera.rotation);
+
+                camera.position.set(dstpos.x, dstpos.y, dstpos.z);
+                camera.lookAt(dstlookat);
+                var dstrot = new THREE.Euler().copy(camera.rotation);
+
+                camera.position.set(origpos.x, origpos.y, origpos.z);
+                camera.rotation.set(origrot.x, origrot.y, origrot.z);
+
+                var dest = new THREE.Quaternion().setFromEuler(dstrot);
+                var o = {t: 0};
+
+                new TWEEN.Tween(o).to({t: 1}, 500).onUpdate(function () {
+                    camera.position.lerpVectors(origpos, dstpos, o.t);
+                    camera.quaternion.slerp(dest, o.t);
+                }).easing(TWEEN.Easing.Cubic.InOut).start();
+            }
+
+            function zoomIn(obj, dist) {
+                dist = dist || 75;
+                var layouts = scene.getObjectByName('layouts');
+                var center = new THREE.Vector3();
+                center.setFromMatrixPosition( obj.matrixWorld );
+                controls.target.copy(center);
+                var newpos = new THREE.Vector3(center.x, center.y+dist, center.z+0.01);
+                moveAndLookAt(camera, newpos, center)
+            }
+
+            function zoomOut() {
+                if (!sceneBounds) return;
+                var bounds = sceneBounds;
+                var size = bounds.getSize();
+                var center = bounds.getCenter();
+
+                controls.target.copy(center);
+
+                var sw = window.innerWidth;
+                var sh = window.innerHeight;
+                var w = size.x;
+                var h = size.z;
+
+                var hdist = h*2;
+                var wdist = w*sh/sw*2;
+
+                var dw = Math.abs(sw-w);
+                var dh = Math.abs(sh-h);
+                var dk = sw/w;
+
+                var dist = h*dk < sh ? wdist : hdist*1.3;
+
+                var newpos = new THREE.Vector3(center.x, center.y + dist*1.05, center.z+0.01);
+                moveAndLookAt(camera, newpos, center)
+            }
+
+            function initScene() {
+                scene = new THREE.ObjectLoader().parse(data);
+                camera = scene.getObjectByName("Camera");
+                onWindowResize();
+
+                camera.add( new THREE.PointLight( 0xffffff, 0.5) );
+                scene.add( new THREE.AmbientLight(0xffffff, 0.5) );
+
+                var keycaps = scene.getObjectByName('keycaps');
+                keycaps.visible = false;
+                keycaps.rotation.set(-Math.PI/2, 0,-Math.PI*2);
+                keycaps.traverse( function(obj) {
+                    if ( obj instanceof THREE.Mesh ) {
+                        obj.rotation.set(0,0,0);
+                        obj.geometry.scale(-1,-1,1);
+                    }
+                });
+
+                if (!scene.getObjectByName('layouts')) {
+                    var layouts = new THREE.Group();
+                    layouts.name = 'layouts';
+                    scene.add(layouts);
+                    layouts.rotation.set(-Math.PI/2, 0,-Math.PI*2);
+                }
+
+                scene.background = new THREE.Color( 0xdddddd );
+
+                controls = new THREE.OrbitControls( camera, container );
+                controls.autoRotate = false;
+                //container.ondblclick = function() { controls.autoRotate = !controls.autoRotate; }
+
+                camera.position.set(0,10000,0);
+            }
+
+
+            function init() {
+                document.getElementById('files').addEventListener('change', function(evt){
+                    for (var i = 0, f; f = evt.target.files[i]; i++) {
+                        try {
+                            var file = evt.target.files[i];
+                            var start = 0;
+                            var stop = file.size - 1;
+                            var reader = new FileReader();
+                            reader.onloadend = function(evt) {
+                                if (evt.target.readyState == FileReader.DONE) {
+                                    var json = evt.target.result;
+                                    deserialize(JSON.parse(json));
+                                }
+                            };
+                            var blob = file.slice(start, stop + 1);
+                            reader.readAsBinaryString(blob);
+                        } catch (err) {
+                            console.log(err.message);
+                        }
+                    }
+                });
+
+                var ctrl = document.getElementById('preset');
+
+                ctrl.addEventListener('change', function(evt) {
+                    var setName = this[this.selectedIndex].value;
+                    location.hash = encodeURIComponent(setName);
+
+                    if (setName.startsWith('gists/')) {
+                        loadGist(setName);
+                    } else {
+                        deserialize(sets[setName]);
+                    }
+
+                }, false);
+
+                Object.keys(sets).forEach(function(key) {
+                    var option = document.createElement('option');
+                    option.text = key;
+                    option.value = key;
+                    ctrl.add(option);
+                });
+
+                var setName = Object.keys(sets)[0];
+
+                container = document.createElement( 'div' );
+                document.body.appendChild( container );
+                renderer = new THREE.WebGLRenderer( { antialias: antialias } );
+                renderer.setPixelRatio( window.devicePixelRatio );
+                renderer.setSize( window.innerWidth, window.innerHeight );
+                renderer.setClearColor(0xdddddd, 1.0);
+                renderer.clearColor();
+                container.appendChild( renderer.domElement );
+                window.addEventListener( 'resize', onWindowResize, false );
+
+                if (location.hash) {
+                    hash = location.hash.slice(1);
+                    if (hash.startsWith('/gists/')) {
+                        document.getElementById('gist').value = 'http://www.keyboard-layout-editor.com/#'+hash;
+                        loadGist(hash);
+                    } else {
+                        setName = decodeURIComponent(hash);
+                        var e = ctrl.getElementsByTagName('option');
+                        for (var i=0; i<e.length; i++) {
+                            e[i].selected = (setName === e[i].value);
+                        }
+                        setName = ctrl[ctrl.selectedIndex].value;
+                        deserialize(sets[setName]);
+                    }
+                } else {
+                        deserialize(sets[setName]);
+                }
+
+            }
+
+            function onWindowResize() {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize( window.innerWidth, window.innerHeight );
+            }
+
+            function render_html_to_canvas(html, ctx, x, y, w, h, cb, canvas, obj) {
+                var doc = document.implementation.createHTMLDocument('');
+                doc.body.innerHTML = html;
+                doc.documentElement.setAttribute('xmlns', doc.documentElement.namespaceURI);
+                var xml = (new XMLSerializer).serializeToString(doc.body);
+                var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">' +
+                    '<foreignObject width="100%" height="100%">'+xml+'</foreignObject></svg>';
+                var url = 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+                var img = new Image();
+                img.onload = function() { ctx.drawImage(img, x, y); cb(canvas, obj); }
+                img.src = url;
+            }
+
+            function getFontSize(textSize, tsize, w, h) {
+                return (20+textSize*8) * (tsize/256) * (w>h ? h/w : w/h);
+            }
+
+            function validateColor(c) { return c.substring(0,7); }
+
+            function makeTexture(key, obj, cb) {
+                var canvas = document.createElement( 'canvas' );
+
+                var margins = {
+                    'DCS': {top:0.1, right:0.2, bottom:0.25, left:0.2},
+                    'SA' : {top:0.2, right:0.2, bottom:0.2, left:0.2},
+                    'DSA': {top:0.2, right:0.2, bottom:0.2, left:0.2},
+                    'G20': {top:0.1, right:0.15, bottom:0.2, left:0.15}
+                };
+
+                var margin = margins['DCS'];
+                Object.keys(margins).forEach(function(key) {
+                    if (obj.name.includes(key)) margin = margins[key];
+                });
+
+                var use_large_textures = 1;
+
+                var w = key.width, h = key.height;
+
+                var tsize = pot(Math.max(w,h)*256);
+
+                var cw = w>h ? tsize : tsize * w/h;
+                var ch = h>w ? tsize : tsize * h/w;
+
+                var dx = cw * margin.left/w;
+                var dy = ch * margin.top/h;
+                cw -= dx + cw * margin.right/w;
+                ch -= dy + ch * margin.bottom/h;
+
+                canvas.width = canvas.height = tsize;
+                var ctx = canvas.getContext( '2d' );
+                ctx.fillStyle = validateColor(key.color);
+                ctx.fillRect(0, 0, tsize, tsize);
+                var html = '';
+                for (var i=0; i<12; i++) {
+                    var caption = key.labels[i];
+                    if (caption) {
+                        var textColor = key.textColor[i]!=null ? key.textColor[i] : key.default.textColor;
+                        var textSize = key.textSize[i] ? key.textSize[i] : key.default.textSize;
+                        var ta = (i==0||i==3||i==6||i==9) ? 'left' : (i==1||i==4||i==7||i==10) ? 'center' : 'right';
+                        var va = (i==0||i==1||i==2) ? 'top' : (i==3||i==4||i==5) ? 'middle' : 'bottom';
+
+                        var fontSize = getFontSize(textSize, tsize, w, h);
+
+                        var style = '';
+                        var size = 'width:'+cw+'px; height:'+ch+'px;';
+                        var font = 'font:'+fontSize+'px Sans-Serif;';
+                        //style += 'border: 1px solid black;'
+                        style += 'text-align:'+ta+';';
+                        style += 'color:'+validateColor(textColor)+';';
+                        style += 'vertical-align:'+va+';';
+                        style += 'display: table-cell;';
+                        style += 'word-wrap; break-all;';
+
+                        if (i<=8) {
+                            html += '<div style="position:absolute; left:'+dx+'px; top:'+dy+'px;">';
+                            html += '<div style="'+style+font+size+'">'+caption+'</div>';
+                            html += '</div>';
+                        } else {
+                            fontSize = getFontSize(3, tsize, w, h);
+                            var size = 'width:'+cw+'px; height:'+fontSize+'px;';
+                            var font = 'font:'+fontSize+'px Sans-Serif; transform: scale(1, 0.5);';
+                            html += '<div style="position:absolute; left:'+dx+'px; top:'+(ch+fontSize*0.75)+'px;">';
+                            html += '<div style="'+style+font+size+'">'+caption+'</div>';
+                            html += '</div>';
+                        }
+                    }
+                }
+
+                render_html_to_canvas(html, ctx, 0, 0, tsize, tsize, cb, canvas, obj);
+            }
+
+            function pot(n) {
+                var x = 1;
+                while (x<n) x*=2;
+                return x;
+            }
+
+            function profile_row(profile, row, rows) {
+                if (profile=='SA') return 3;
+                if (rows==6) return [1,1,2,3,4,4][row];
+                else if (rows==5) return [1,2,3,4,4][row];
+                return row>3 ? 4 : Math.floor(row+1);
+            }
+
+            function getXY(x,y,w,h) {
+                s = 19.05; // 3/4 inch, precisely 19.05 mm
+                var ox = (x+w/2)*s;
+                var oy = -(y+h/2)*s;
+                return {x:ox, y:oy};
+            }
+
+            function add_keycap(key, row, rows) {
+                var keycaps = scene.getObjectByName('keycaps');
+                var layout = scene.getObjectByName('layouts');
+                var profile = 'DCS';
+                var w = key.width, h = key.height;
+                var space = w>=6.0;
+                var flip = false;
+                rs = '';
+
+                ['DCS','DSA','SA','G20'].forEach(function(s) {if (key.profile.startsWith(s)) profile = s; });
+                ['R1','R2','R3','R4'].forEach( function(s) { if (key.profile.includes(' '+s)) rs = s; });
+
+                if (profile=='DSA' && rs=='SPACE') profile='DCS';
+                if (profile=='SA' && rs=='') rs='R3';
+                if (profile=='DSA' && w>1) profile='DCS';
+                if (profile == 'DSA') rs='R3';
+
+                //if (profile=='SA' && rs=='R3') rs='R3.001';
+                //if (profile=='DSA' && rs=='R3') rs='R3.001';
+
+                var r = profile_row(profile, row, rows);
+
+                if (rs=='') rs = 'R' + r;
+
+                if (profile=='SA' && rs=='R3') {
+                    if (w==1.5) rs='R2';
+                    if (w==1.25) rs='R4';
+                    if (w==2) rs='R1';
+                }
+
+                if (profile=='DCS' && rs=='R4') {
+                    if (w==2) rs='R1';
+                }
+
+                if (h==2) { profile='DCS'; rs='PLUS'; }
+
+                if (rs!='R2' && w==1.5) rs='R2';
+                if (rs!='R3' && w==1.75) rs='R3';
+
+                var id = rs + ( w>1 ? ' '+w : '');
+
+                if (w==1 && h==1.5) { flip=true; id = 'R2 1.5'; profile=='DSA' ? 'DCS': profile; }
+
+                var name = space ? (profile+' SPACE' ) : (profile + ' ' + id);
+
+
+                if (w==1.25 && h==2) name = 'ISO ENTER';
+
+                if (w==2.5 && h==1) name = 'DCS R4 2.5';
+
+                if (w==6.0 && h==1) name = 'DCS SPACE 6u';
+
+
+                var obj = keycaps.getObjectByName(name);
+                obj = obj ? obj.clone() : keycaps.getObjectByName(profile+' R3').clone();
+
+                var x = key.x;
+                var y = key.y;
+                var rx = key.rotation_x;
+                var ry = key.rotation_y;
+                var ra = key.rotation_angle;
+
+                var o = getXY(x, y, w, h);
+
+                if (ra!=0) {
+                    c = getXY(rx, ry, 0, 0);
+                    var az = -ra * Math.PI / 180.0;
+                    obj.position.set(o.x, o.y, 0);
+
+                    var m0 = new THREE.Matrix4();
+                    var m1 = new THREE.Matrix4();
+                    var m2 = new THREE.Matrix4();
+                    var m3 = new THREE.Matrix4();
+                    var m4 = new THREE.Matrix4();
+
+                    m0.makeTranslation(c.x, c.y, 0);
+                    m1.makeRotationZ(az);
+                    m2.makeTranslation(-c.x, -c.y, 0);
+                    m3.makeTranslation(o.x, o.y, 0);
+                    m4.makeRotationZ(flip ? (ra>0 ? 1: -1 ) * Math.PI/2 : 0);
+
+                    obj.matrix = m0.multiply(m1).multiply(m2).multiply(m3).multiply(m4);
+
+                    obj.matrixAutoUpdate = false;
+
+                } else {
+                    obj.position.set(o.x, o.y, 0);
+                    if (flip)
+                        obj.rotation.set(0,0,Math.PI/2);
+                }
+
+                obj.angle = ra;
+                totalKeycaps++;
+
+                makeTexture(key, obj, function(canvas, obj) {
+                    obj.material = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x202020 } )
+                    obj.material.map = new THREE.CanvasTexture(canvas);
+                    obj.material.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                    obj.helper = new THREE.BoxHelper( obj );
+                    obj.helper.visible = false;
+                    obj.helper.name = 'bounds';
+                    layout.add(obj.helper);
+                    layout.add(obj);
+                    loadedKeycaps++;
+                });
+            }
+
+            function animate() {
+
+                requestAnimationFrame( animate );
+                var t = TWEEN.update();
+
+                if (!t && controls && controls.autoRotate) {
+                    controls.autoRotateSpeed = 3.0;
+                    controls.update();
+                }
+
+                if (controls) render();
+
+                if (loadedKeycaps>0 && loadedKeycaps==totalKeycaps) {
+                    totalKeycaps = loadedKeycaps = 0;
+                    var layouts = scene.getObjectByName('layouts');
+                    var helper = new THREE.BoxHelper(layouts);
+                    helper.name = 'bounds';
+                    helper.visible = show_helpers;
+                    scene.add(helper);
+                    sceneBounds = new THREE.Box3().setFromObject(layouts);
+                    zoomOut();
+                }
+            }
+
+            function render() {
+                renderer.render( scene, camera );
+            }
+
+            function toggleFullScreen(c) {
+                var c = document.body, d = document;
+                if (!d.fullscreenElement && !d.mozFullScreenElement && !d.webkitFullscreenElement && !d.msFullscreenElement ) {
+                    if (c.requestFullscreen) c.requestFullscreen();
+                    else if (c.msRequestFullscreen) c.msRequestFullscreen();
+                    else if (c.mozRequestFullScreen) c.mozRequestFullScreen();
+                    else if (c.webkitRequestFullscreen) c.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+                } else {
+                    if (document.exitFullscreen) document.exitFullscreen();
+                    else if (document.msExitFullscreen) document.msExitFullscreen();
+                    else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
+                    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                }
+            }
+
+            document.onkeypress = function(e) {
+                var c = String.fromCharCode(e.charCode);
+                if (c.toLowerCase()=='f') toggleFullScreen();
+                if (c.toLowerCase()=='r') controls.autoRotate = !controls.autoRotate;
+            };
+
+            $serial2 = {};
+
+            (function () {
+                var kf = {w:'width',h:'height',w2:'width2',h2:'height2',r:'rotation_angle', rx:'rotation_x',
+                    ry:'rotation_y',c:'color',p:'profile',n:'nub',g:'ghost',l:'stepped',d:'decal'};
+
+                var kl = [
+                    [ 0, 6, 2, 8, 9,11, 3, 5, 1, 4, 7,10], [ 1, 7,-1,-1, 9,11, 4,-1,-1,-1,-1,10],
+                    [ 3,-1, 5,-1, 9,11,-1,-1, 4,-1,-1,10], [ 4,-1,-1,-1, 9,11,-1,-1,-1,-1,-1,10],
+                    [ 0, 6, 2, 8,10,-1, 3, 5, 1, 4, 7,-1], [ 1, 7,-1,-1,10,-1, 4,-1,-1,-1,-1,-1],
+                    [ 3,-1, 5,-1,10,-1,-1,-1, 4,-1,-1,-1], [ 4,-1,-1,-1,10,-1,-1,-1,-1,-1,-1,-1],
+                ];
+
+                function unp(data, align) {
+                    var v = typeof data==='string' ? data.split('\n') : (data ? data : []);
+                    var out = new Array(12);
+                    for(var i=0; i<v.length; i++) out[kl[align][i]] = v[i];
+                    return out;
+                }
+
+                $serial2.deserialize = function(data) {
+                    var meta = data[0], keys = [];
+                    var p = {c:0,t:0,p:'',r:0,a:0,f:3,fa:[],x:0,y:0,sm:'',w:1,h:1,c:'#cccccc',t:'#000000'};
+                    var x=0,y=0,rx=0,ry=0,ofs=Array.isArray(data[0])?0:1,rows=data.length-ofs;
+                    for (row=0; row<rows; row++) {
+                        data[row+ofs].forEach(function(e) {
+                            if (typeof e == 'string') {
+                                var key = {x:x,y:y,x2:0,y2:0,rotation_x:rx,rotation_y:ry,
+                                    labels:unp(e,p.a),textColor:unp(p.t,p.a),textSize:unp(p.fa,p.a),
+                                    default:{textColor:p.t, textSize:p.f}};
+                                Object.keys(kf).forEach(function(f) { if (p[f]!=undefined) key[kf[f]] = p[f]; });
+                                keys.push(key);
+                                x += p.w;
+                                p.w = p.h = 1;
+                            } else {
+                                Object.keys(e).forEach(function(key) { p[key] = e[key]; });
+                                if (p.rx!=undefined) { rx = x = p.rx; y = ry; }
+                                if (p.ry!=undefined) { ry = y = p.ry; }
+                                p.rx = p.ry = undefined;
+                                x += p.x;
+                                y += p.y;
+                                p.x = p.y = p.n = p.l = 0;
+                            }
+                        });
+                        x = rx;
+                        y++;
+                    }
+                    return {meta:meta, keys:keys};
+                }
+            }());
+
+            function deserialize(data) {
+                initScene();
+                var keyboard = $serial.deserialize(data);
+                var rows = 0; keyboard.keys.forEach(function(k) { if (k.y!=y) rows++; y = k.y; });
+                var row = 0;
+                var y = 0;
+                keyboard.keys.forEach(function(k) {
+                    //console.log(JSON.stringify(k));
+                    if (k.y!=y) row++;
+                    add_keycap(k, row, rows);
+                    y = k.y;
+                });
+
+                var str = '';
+                if (keyboard.meta) {
+                    if (keyboard.meta.name) str += keyboard.meta.name;
+                    if (keyboard.meta.author) {
+                        if (str) str += '<br/>';
+                        str += '<i>' + keyboard.meta.author + '</i>';
+                    }
+                    document.getElementById('info').innerHTML = str;
+                }
+            }
+
+            window.onload = function() {
+                if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+                init();
+                animate();
+            };
+
+            var loadJSONP = (function() {
+                var unique = 0;
+                return function(url, callback, context) {
+
+                    var name = "_jsonp_" + unique++;
+                    if (url.match(/\?/)) url += "&callback="+name;
+                    else url += "?callback="+name;
+    
+                    var script = document.createElement('script');
+                    script.type = 'text/javascript';
+                    script.src = url;
+
+                    window[name] = function(data) {
+                        callback.call((context || window), data);
+                        document.getElementsByTagName('head')[0].removeChild(script);
+                        script = null;
+                        delete window[name];
+                    }
+
+                    document.getElementsByTagName('head')[0].appendChild(script);
+                }
+            })();
+
+            function loadGist(setName) {
+                    setName = setName.substr(setName.indexOf('gists/'));
+                    location.hash = '/'+setName;
+                    loadJSONP('https://api.github.com/'+setName, function(data) {
+                    for (key in data.data.files) {
+                        if (key.endsWith('.json')) {
+                            json = JSON.parse(data.data.files[key].content);
+                            deserialize(json);
+                        }
+                    }
+                });
+            }
+
+        </script>
+        </head>
+    <body>
+
+        <div class="controls">
+            <table width="100%">
+            <tr>
+            <td width="1px">
+            <input type="file" id="files" name="files[]" multiple="multiple" accept=".json" style="display:none"/>
+            <input type="button" value="Browse..." onclick="document.getElementById('files').click();" />
+            </td>
+            <td width="1px">
+            <select id="preset"></select>
+            </td>
+            <td width="100%">
+            <input type="text" id="gist" placeholder="http://www.keyboard-layout-editor.com/#/gists/..." style="width:100%" onchange=loadGist(this.value)>
+            </td>
+            </table>
+        </div>
+
+        <div id="info"></div>
+        <div class="github"><a href="https://github.com/joric/keycaps"><svg style="fill:#000; opacity:0.25" height="24" width="24" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path></svg></a></div>
+    </body>
 </html>

@@ -9,7 +9,7 @@ echo rendering...
 
 echo start time: %time%
 
-goto dcs_numpad
+goto iso_enter
 
 :dcs
 openscad.exe -Dprofile=0 -Drow=1 -o "..\render\DCS R1.stl" render.scad
@@ -52,6 +52,9 @@ openscad.exe -Dspacebar=1 -Dprofile=2 -Drow=3 -o "..\render\SA SPACE.stl" render
 
 :dcs_numpad
 openscad.exe -Dprofile=0 -Drow=3 -Dw=1 -Dh=2 -o "..\render\DCS PLUS.stl" render.scad
+
+:iso_enter
+openscad.exe -DISOEnter=1 -o "..\render\ISO ENTER.stl" render.scad
 
 :end
 echo end time: %time%

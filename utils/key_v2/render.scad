@@ -135,6 +135,7 @@ module g20() {
 }
 
 module fake_iso_enter() {
+	$ISOEnter=true;
 	$bottom_key_width = 18.16 * 1.5;
 	$bottom_key_height = 18.16 * 2;
 	$width_difference = 4;
@@ -146,8 +147,7 @@ module fake_iso_enter() {
 	$dish_depth = 1;
 	$dish_skew_x = 0;
 	$dish_skew_y = 0;
-
-  children();
+	children();
 }
 
 module brimmed() {
@@ -338,8 +338,9 @@ h = 1.0;
 
 echo("profile/row/w/h:", profile, row, w, h);
 
-
-if (spacebar==1 && profile==0) {
+if (ISOEnter==1) {
+	u(w) uh(h) dcs_row(row) fake_iso_enter() rounded_cherry_key();
+} else if (spacebar==1 && profile==0) {
 	spacebar() dcs_row(row) rounded_cherry_key();
 } else if (spacebar==1 && profile==2) {
 	spacebar() sa_row(row) rounded_cherry_key();
