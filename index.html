@@ -440,7 +440,8 @@
 
                 if (h==2) { profile='DCS'; rs='PLUS'; }
 
-                if (rs!='R2' && w==1.5) rs='R2';
+                if (rs!='R2' && rs!='R4' && w==1.5) rs='R2';
+
                 if (rs!='R3' && w==1.75) rs='R3';
 
                 var id = rs + ( w>1 ? ' '+w : '');
@@ -459,7 +460,6 @@
                 if (w==7 && h==1) { name = 'DCS SPACE 7u'; console.log('here'); }
 
                 if (key.height==1 && key.width==1.25 && key.width2==1.75) name = 'STEPPED CAPS';
-
 
                 var obj = keycaps.getObjectByName(name);
                 obj = obj ? obj.clone() : keycaps.getObjectByName(profile+' R3').clone();
