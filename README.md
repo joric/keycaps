@@ -19,10 +19,15 @@ while DCS is rendered in a few seconds (see utils directory). Rendering time can
 
 ### Blender
 
-Rendered .stl files are then processed with Blender's "Decimate" and "Edge Split" modifiers.
-Smoothing groups ("Auto Smooth") do not get exported so I had to use Edge Split geometry modifier.
-Texture UVs assigned from Blender, using "Project from View" and "Project from View (Bounds)" for
-the selected visible geometry. All modifer stacks should be collapsed for proper exporting.
+* Rendered .stl files are then processed with Blender's "Decimate" and "Edge Split" modifiers.
+* Smoothing groups ("Auto Smooth") do not get exported so I had to use Edge Split geometry modifier.
+* All modifer stacks should be collapsed for proper exporting.
+* Texture UVs are assigned from Blender too, using "Project from View" for the visible geometry.
+* Proper texture offsets and texture scale are also important, study existing keys for examples.
+* Use 1u=1mm (or scale grid to 19.05mm), so standard keycap is about 19x19, 2u keycap is 19x38 and so on.
+* After manual exporting with io_threejs, add `data=` to the beginning of the json file.
+
+Sadly the scripts and Blender are a little bit obsolete by now (I used Blender 2.67 and threejs r87).
 
 
 ## License
