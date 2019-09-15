@@ -43,5 +43,6 @@ All copyrights to resource files belong to their respective owners.
 * [OpenSCAD models by rsheldiii](https://github.com/rsheldiii/openSCAD-projects)
 * [OpenSCAD and Blender SA models](https://github.com/getclacking/SA-profile-keys-3D-models)
 * [Keyset database (Google doc)](https://docs.google.com/spreadsheets/d/1byRpKCGR8tbV8tyTb3vwhLyiOcCgxbRTDUptnWgG3IE/edit#gid=0)
-* [Reddit](https://www.reddit.com/r/MechanicalKeyboards/comments/7hdxun/has_this_neat_rendering_of_various_keyboard/)
+* [Reddit post about this project](https://www.reddit.com/r/MechanicalKeyboards/comments/7hdxun/has_this_neat_rendering_of_various_keyboard/)
+* [CAD and code for Wookiee's Custom Keyboard, lots of keycap models made in Solidworks](https://github.com/dankwookiee/Kieeboard)
 
