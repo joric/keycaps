@@ -4,6 +4,10 @@ Keyboard layout editor and renderer
 
 Demo: http://joric.github.io/keycaps
 
+**Upd** (2020-12-02) check this out also, this is pretty cool (not mine):
+
+* https://keyboardsimulator.xyz
+
 
 ## Software
 
